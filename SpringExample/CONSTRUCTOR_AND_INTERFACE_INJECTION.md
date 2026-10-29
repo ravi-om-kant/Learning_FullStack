@@ -289,3 +289,37 @@ This is called **Dependency Injection (DI)** and it is the heart of Spring Boot.
 
 > `UserManager` says: *"Give me anything that can `getUserDetails()` and I will work with it."*
 > Spring Boot says: *"I found `UserDatabaseProvider` — it qualifies. Here you go."*
+
+
+
+# Annotation:
+- Annotations in Java provides a way to add metadata to your code.
+- Common Annotations:
+  - `@Component:`This annotation simply marks a Java Class as a bean or a managed component. 
+  - `@Autowire:`Using which spring will autowire the dependency with the matching type.
+  - `@Qualifier:`If there are multiple types, you can specify qualifier as to which bean should be matched.
+  - `@Value:` Is used to inject property value into  your beans.
+  - `@Repository`:Is used to define data repository, It's a specialized version of the component annotation that we see on the screen.
+  - `@Service:`: It's a specialization of component annotation and it is used to indicate that this class is providing business services.
+  - `@Controller:` Is used to create a web controller that will handle HTTP requersts.
+  - `@RequestMapping:`
+  - `@SpringBootApplication:`
+
+
+# Components and Components Scan
+- Components refers to a Java class that is managed by a Spring IOC container. It's a container that manages the Spring Beans.
+- Components are like a bean only, but it's specifically designed to be auto-detected and configured from classpath scanning. (Component is a special kind of bean that is used to be auto-detected)
+- `Defining Component in Spring:`
+  - Using XML:
+    - `<bean id="myComponent" class="com.example.MyComponent"/>`
+  - Using Annotations
+    ```java
+    import org.springframework.stereotype.Component;
+    
+    @Component //Marks the Class as a spring component
+    public class MyComponent{
+        // Class Implementation
+    }    
+    ```
+- **Component Scanning:** It's a feature helps to automatically detect and register beans from predefined package paths.
+- Will create a component, spring needs to know where it needs to check the component and register itself. Because Component is a bean that auto registers itself right now in order to tell spring, I want you to scan this particular package specifically and look for all the components.
