@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:schemaLocation="
+        http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd">
+
+    <!-- bean definitions here -->
+    <!--  specification by type in Car class is Specification Class (class="car.example.autowire.type.Specification") not id="specification"  -->
+
+    <bean id="specification" class="car.example.autowire.constructor.Specification">
+        <property name="manufacturer" value="Tata"/>
+        <property name="model" value="Curve"/>
+    </bean>
+
+
+    <!--    <bean id="myCar" class="car.example.autowire.name.Car">-->
+    <!--        <constructor-arg ref="carSpecification"/>-->
+    <!--    </bean>-->
+
+    <!--  It is going to look for specification class Constructor in Car Class -->
+    <bean id="myCar" class="car.example.autowire.constructor.Car" autowire="constructor"/>
+
+</beans>
