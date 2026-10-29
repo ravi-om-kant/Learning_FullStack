@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:schemaLocation="
+        http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd">
+
+    <!-- bean definitions here -->
+    <!--  specification by name in Car class is specification not carSpecification  -->
+
+<!--    <bean id="carSpecification" class="car.example.autowire.name.Specification">-->
+    <bean id="specification" class="car.example.autowire.name.Specification">
+        <property name="make" value="Toyota"/>
+        <property name="model" value="Corolla"/>
+    </bean>
+
+    <bean id="specification2" class="car.example.autowire.name.Specification">
+        <property name="make" value="Toyota 1"/>
+        <property name="model" value="Corolla 1"/>
+    </bean>
+
+<!--    <bean id="myCar" class="car.example.autowire.name.Car">-->
+<!--        <constructor-arg ref="carSpecification"/>-->
+<!--    </bean>-->
+
+    <!--  It is going to look for specification by name in Car  -->
+    <bean id="myCar" class="car.example.autowire.name.Car" autowire="byName"/>
+</beans>
