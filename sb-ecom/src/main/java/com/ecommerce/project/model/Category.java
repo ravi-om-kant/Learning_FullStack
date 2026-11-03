@@ -5,6 +5,7 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -20,6 +21,7 @@ public class Category {
     private Long categoryId;
 
     @NotBlank(message = "Category name is Required")
+    @Size(min = 5, message = "Category name must contain least 5 characters")
     private String categoryName;
     /* // Added Lombok to the project
     public Long getCategoryId() {

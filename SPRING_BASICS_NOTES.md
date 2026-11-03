@@ -2027,3 +2027,117 @@ This avoids `ClassCastException` when a non-field error is in the list.
 
 **Q90. Can you have multiple `@ExceptionHandler` methods in one `@RestControllerAdvice` class?**
 Yes. Each method handles a different exception type. Spring picks the most specific matching handler when an exception is thrown.
+
+---
+
+## 20.2 Why the handler returns 200 instead of 400
+
+The handler method returns a plain `Map<String, String>`:
+
+```java
+public Map<String, String> handleValidationExceptions(MethodArgumentNotValidException ex) {
+    ...
+    return fieldErrors;   // ← plain object, no status specified
+}
+```
+
+When a `@RestControllerAdvice` method returns a plain object with **no `ResponseEntity` and no `@ResponseStatus` annotation**, Spring has no instruction about the HTTP status, so it defaults to **200 OK** — even though the body contains error messages.
+
+Spring's logic is: *"You gave me a body to serialize, I'll send it with 200 unless you tell me otherwise."*
+
+To get 400, there are two options:
+
+**Option 1 — Wrap in `ResponseEntity`:**
+```java
+public ResponseEntity<Map<String, String>> handleValidationExceptions(...) {
+    ...
+    return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(fieldErrors);
+}
+```
+
+**Option 2 — Add `@ResponseStatus` on the method:**
+```java
+@ResponseStatus(HttpStatus.BAD_REQUEST)
+public Map<String, String> handleValidationExceptions(...) {
+    ...
+    return fieldErrors;
+}
+```
+
+Both produce the same result: the same JSON body, but with **400** in the status line.
+
+The body content (field → message map) is already correct — the only problem is the missing status instruction.
+
+**Option 3 - Add a custom `buildError` method:**
+```java
+// filename: global-exception-handler.java
+
+package com.ecommerce.project.exception;
+
+import jakarta.validation.ConstraintViolationException;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.RestControllerAdvice;
+
+import java.util.LinkedHashMap;
+import java.util.Map;
+
+@RestControllerAdvice
+public class GlobalExceptionHandler {
+
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    public ResponseEntity<Map<String, Object>> handleRequestValidation(
+            MethodArgumentNotValidException ex) {
+
+        Map<String, String> fieldErrors = new LinkedHashMap<>();
+        ex.getBindingResult().getFieldErrors().forEach(error ->
+                fieldErrors.put(error.getField(), error.getDefaultMessage()));
+
+        return badRequest(fieldErrors);
+    }
+
+    @ExceptionHandler(ConstraintViolationException.class)
+    public ResponseEntity<Map<String, Object>> handleConstraintViolation(
+            ConstraintViolationException ex) {
+
+        Map<String, String> fieldErrors = new LinkedHashMap<>();
+        ex.getConstraintViolations().forEach(violation ->
+                fieldErrors.put(
+                        violation.getPropertyPath().toString(),
+                        violation.getMessage()));
+
+        return badRequest(fieldErrors);
+    }
+
+    private ResponseEntity<Map<String, Object>> badRequest(
+            Map<String, String> fieldErrors) {
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("status", HttpStatus.BAD_REQUEST.value());
+        body.put("error", "Validation failed");
+        body.put("fieldErrors", fieldErrors);
+        return ResponseEntity.badRequest().body(body);
+    }
+}
+
+```
+
+---
+
+### Interview Questions — Handler returning wrong status
+
+**Q91. Why does a `@RestControllerAdvice` handler return 200 even when it handles a validation error?**
+Because the method returns a plain object with no `ResponseEntity` and no `@ResponseStatus`. Spring defaults to 200 OK when no status instruction is given, regardless of which exception was caught.
+
+**Q92. What are the two ways to set the HTTP status on a `@ExceptionHandler` method?**
+Return a `ResponseEntity` with the desired status (e.g., `ResponseEntity.status(HttpStatus.BAD_REQUEST).body(...)`), or annotate the method with `@ResponseStatus(HttpStatus.BAD_REQUEST)`.
+
+**Q93. What is the difference between the two approaches for setting the status on an exception handler?**
+`ResponseEntity` gives full control — you can also set headers and choose the body at runtime. `@ResponseStatus` is simpler and fixes the status at compile time, but you cannot change it per-request and you cannot add custom headers.
+
+**Q94. If the JSON body is correct but the status is 200, what is missing?**
+A status instruction — either a `ResponseEntity` wrapping the return value, or a `@ResponseStatus` annotation on the handler method.
+
+**Q95. Does returning a plain `Map` from a `@RestControllerAdvice` method affect the body?**
+No. The body is serialized correctly to JSON regardless. Only the HTTP status is wrong when no status is specified.
