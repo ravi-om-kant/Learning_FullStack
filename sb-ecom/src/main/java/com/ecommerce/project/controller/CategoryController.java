@@ -2,6 +2,7 @@ package com.ecommerce.project.controller;
 
 import com.ecommerce.project.model.Category;
 import com.ecommerce.project.service.CategoryService;
+import jakarta.validation.Valid;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpRange;
@@ -44,7 +45,7 @@ public class CategoryController {
 
 //    @PostMapping("/public/categories")
     @RequestMapping(value = "/public/categories", method = RequestMethod.POST)
-    public ResponseEntity<String> createCategory(@RequestBody Category category){
+    public ResponseEntity<String> createCategory(@Valid @RequestBody Category category){
         categoryService.createCategory(category);
         List<Category> categoryList = categoryService.getAllCategoryList();
 //        return "Category created successfully: " + categoryService.getAllCategoryList().get(categoryList.size()-1)
