@@ -1577,3 +1577,453 @@ Every new key needs a read and an update on a separate table, which is slower th
 
 **Q68. Why should you not generate IDs with `list.size() + 1`?**
 After a delete, the next ID can duplicate an existing one. The database should generate the ID.
+
+
+## 19. Validation with `@Valid` and Lombok
+
+### 19.1 What problem this solves
+
+A client can send anything in the JSON body. Without checks, an empty category name goes straight to the database, or fails much later with a confusing error.
+
+Validation means checking the data **at the boundary** (when it enters the controller) and rejecting bad input before any service or database code runs.
+
+Two libraries are used in this project:
+
+| Library | Role |
+|---|---|
+| **Jakarta Bean Validation** (`jakarta.validation.*`) | The standard API. It only defines annotations such as `@NotBlank`. |
+| **Hibernate Validator** | The implementation of that API. It reads the annotations and does the checks. |
+
+The dependency in `pom.xml` brings in the implementation:
+
+```xml
+<dependency>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-validation</artifactId>
+</dependency>
+```
+
+Spring Boot 2.3 and later no longer add this automatically with `spring-boot-starter-web`, so it must be declared.
+
+### 19.2 The model: rules written on the fields
+
+```java
+@Entity
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+public class Category {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.AUTO)
+    private Long categoryId;
+
+    @NotBlank(message = "Category name is Required")
+    private String categoryName;
+}
+```
+
+- The rule lives next to the field, so there is one place to read it.
+- `@NotBlank` fails for `null`, `""` and `"   "` (only spaces).
+- The `message` is what the caller sees when the rule fails.
+
+### 19.3 The controller: `@Valid` turns the check on
+
+```java
+@RequestMapping(value = "/public/categories", method = RequestMethod.POST)
+public ResponseEntity<String> createCategory(@Valid @RequestBody Category category) {
+    categoryService.createCategory(category);
+    ...
+}
+```
+
+Step by step:
+
+1. `@RequestBody` converts the JSON into a `Category` object (Jackson).
+2. `@Valid` tells Spring: "after you build this object, run the validation rules on it."
+3. If any rule fails, Spring **stops before the method runs**. The service and database are never called.
+4. Spring throws `MethodArgumentNotValidException`, which gives an HTTP **400 Bad Request**.
+
+Without `@Valid`, the annotations on `Category` are ignored. The rules exist but nothing runs them.
+
+**Example request and response**
+
+```
+POST /api/public/categories
+{ "categoryName": "" }
+```
+
+```
+HTTP 400 Bad Request
+{ "timestamp": "...", "status": 400, "error": "Bad Request", "path": "/api/public/categories" }
+```
+
+The default body does not show the message. To show it, add a handler with `@RestControllerAdvice` (see 19.7).
+
+### 19.4 Common constraint annotations
+
+| Annotation | Checks | Use for |
+|---|---|---|
+| `@NotNull` | Not `null` (empty text is allowed) | Numbers, objects, IDs |
+| `@NotEmpty` | Not `null` and not empty (`size > 0`) | Lists, collections, text (spaces allowed) |
+| `@NotBlank` | Not `null`, not empty, and not only spaces | Text such as names, emails |
+| `@Size(min=2, max=50)` | Length of text or size of a collection | Text limits |
+| `@Min(1)` / `@Max(100)` | Numeric range | Quantity, price |
+| `@Positive` / `@PositiveOrZero` | Greater than 0 / 0 or more | Price, stock |
+| `@Email` | Email format | Email fields |
+| `@Pattern(regexp="...")` | Matches a regex | Phone, postcode |
+| `@Past` / `@Future` | Date is before or after now | Birth date, expiry |
+
+Choosing between the three text checks is a common interview question:
+- `@NotNull` is the weakest: `""` passes.
+- `@NotEmpty` rejects `""` but allows `"   "`.
+- `@NotBlank` is the strictest and is the usual choice for text.
+
+### 19.5 Nested objects and lists
+
+Rules on a child object only run when the parent field is marked `@Valid`:
+
+```java
+public class Product {
+    @NotBlank
+    private String name;
+
+    @Valid                       // without this, Address's rules are skipped
+    private Address address;
+
+    @Valid                       // checks each item in the list
+    private List<Review> reviews;
+}
+```
+
+### 19.6 `@Valid` vs `@Validated`
+
+- `@Valid` (`jakarta.validation`) is the standard one. Use it on request bodies and on nested fields.
+- `@Validated` (`org.springframework.validation.annotation`) is Spring's version. It supports **validation groups** (for example, different rules for create and update). Use it on the class or on a method parameter.
+
+### 19.7 Customising the error response with `@RestControllerAdvice`
+
+Instead of the default body, one class can turn every validation error into a clean response for the whole app:
+
+```java
+@RestControllerAdvice
+public class GlobalExceptionHandler {
+
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    public ResponseEntity<Map<String, String>> handleValidation(MethodArgumentNotValidException ex) {
+        Map<String, String> errors = new LinkedHashMap<>();
+        ex.getBindingResult().getFieldErrors()
+          .forEach(err -> errors.put(err.getField(), err.getDefaultMessage()));
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errors);
+    }
+}
+```
+
+```
+HTTP 400
+{ "categoryName": "Category name is Required" }
+```
+
+Note: this project does not have a `@RestControllerAdvice` class yet.
+
+### 19.8 Things to watch in this project
+
+- **`PUT /public/categories/{id}` has no `@Valid`.** An update with a blank name is accepted. Add `@Valid` to its `@RequestBody` too.
+- **Validation errors are not handled.** Without an advice class, the caller gets only a generic 400.
+- **Validation is not a replacement for database constraints.** Use `@Column(nullable = false, unique = true)` as well, because other code paths can still write bad data.
+- **Do not put `@Valid` on a `@PathVariable`.** Use `@Min`/`@Positive` on the parameter and add `@Validated` on the class instead.
+
+### 19.9 What is Lombok?
+
+Lombok is a **compile-time** library. It generates Java code (getters, setters, constructors, `toString`, `equals`, `hashCode`) while the code is compiled. The source file stays short, and the `.class` file contains the full methods.
+
+In `pom.xml`:
+
+```xml
+<dependency>
+    <groupId>org.projectlombok</groupId>
+    <artifactId>lombok</artifactId>
+    <version>1.18.48</version>
+    <scope>provided</scope>
+</dependency>
+```
+
+`provided` means it is used only at compile time and is not packed into the final jar.
+
+### 19.10 The Lombok annotations on `Category`
+
+| Annotation | What it generates |
+|---|---|
+| `@Getter` | `getCategoryId()`, `getCategoryName()` |
+| `@Setter` | `setCategoryId(...)`, `setCategoryName(...)` |
+| `@ToString` | `toString()` of the form `Category(categoryId=1, categoryName=Books)` |
+| `@EqualsAndHashCode` | `equals()` and `hashCode()` based on the fields |
+| `@Data` | All of the above, plus `@RequiredArgsConstructor` |
+| `@NoArgsConstructor` | `public Category() {}`. JPA needs this. |
+| `@AllArgsConstructor` | A constructor with every field as a parameter |
+
+`@Data` is a shortcut for `@Getter + @Setter + @ToString + @EqualsAndHashCode + @RequiredArgsConstructor`.
+
+The block commented out at the bottom of `Category.java` is exactly what `@Data` replaces. About 20 lines become 5 annotations.
+
+### 19.11 Lombok gotchas (important for JPA)
+
+- **`@Data` on an `@Entity` can break things.** Its `equals`/`hashCode` use all fields, and its `toString` can load lazy relations. For big entities, prefer `@Getter @Setter` and write `equals`/`hashCode` on the ID only.
+- **`@AllArgsConstructor` plus `@NoArgsConstructor`** gives two constructors. JPA needs the no-arg one, so keep it.
+- **IDE support.** If the IDE shows "cannot find getCategoryName()", install the Lombok plugin and turn on annotation processing. The code still compiles from Maven.
+
+### 19.12 How validation and Lombok help build apps faster
+
+| Without | With |
+|---|---|
+| Hand-written checks in every controller (`if (name == null) ...`) | One annotation on the field, checked everywhere `@Valid` is used |
+| 20 lines of getters/setters/constructors per class | A few annotations, generated at compile time |
+| Rules spread across controller, service and UI | Rules in one place on the model |
+| Bad data reaches the database and fails with a SQL error | Bad data is rejected early with a clear message |
+| Change a rule in ten places | Change the annotation once |
+
+### 19.13 Interview Questions - Validation and Lombok
+
+**Q69. What does `@Valid` do?**
+It tells Spring to run the Bean Validation rules on the object before the controller method runs. If a rule fails, Spring throws `MethodArgumentNotValidException` and the method is not called.
+
+**Q70. What is the difference between Bean Validation and Hibernate Validator?**
+Bean Validation (Jakarta) is the specification: it defines annotations like `@NotBlank`. Hibernate Validator is the implementation that checks them.
+
+**Q71. What is the difference between `@NotNull`, `@NotEmpty` and `@NotBlank`?**
+`@NotNull` rejects only `null`. `@NotEmpty` rejects `null` and `""`. `@NotBlank` rejects `null`, `""` and whitespace-only strings. It applies only to `String`.
+
+**Q72. What status code does a failed `@Valid` return by default?**
+400 Bad Request.
+
+**Q73. What is the difference between `@Valid` and `@Validated`?**
+`@Valid` is the standard annotation and is used on request bodies and nested fields. `@Validated` is Spring's version and supports validation groups.
+
+**Q74. Why does a nested object need `@Valid` on its field?**
+Validation does not go into child objects by default. Without `@Valid` on the field, the child's rules are ignored.
+
+**Q75. What is Lombok and why use it?**
+A compile-time library that generates getters, setters, constructors, `toString`, `equals` and `hashCode`. It removes boilerplate, so the class stays short and readable.
+
+**Q76. What does `@Data` include?**
+`@Getter`, `@Setter`, `@ToString`, `@EqualsAndHashCode` and `@RequiredArgsConstructor`.
+
+**Q77. Why is `@Data` risky on a JPA entity?**
+Its `equals`/`hashCode` use every field, and its `toString` can trigger lazy loading. Both can cause subtle bugs or slow queries in entities.
+
+**Q78. Why do JPA entities need a no-argument constructor?**
+Hibernate creates entity objects through reflection, and it needs an empty constructor to do so. `@NoArgsConstructor` provides it.
+
+**Q79. Is Lombok code present in the compiled `.class` file?**
+Yes. Lombok changes the compiled output, so the generated methods exist in the `.class` file. The source file does not contain them.
+
+---
+
+## 20. `GlobalExceptionHandler` — Centralized Error Handling
+
+### Overview
+
+This class is a **centralized error handler** for your entire Spring Boot application. Without it, Spring would return a generic 500 error page or a raw exception stack trace to the API client. With it, you get clean, structured JSON error responses.
+
+---
+
+### `@RestControllerAdvice` — The Key Annotation
+
+```java
+@RestControllerAdvice
+public class GlobalExceptionHandler {
+```
+
+This is a combination of two annotations:
+
+| Annotation | What it does |
+|---|---|
+| `@ControllerAdvice` | Makes this class intercept exceptions thrown from **any** `@Controller` or `@RestController` across the whole app |
+| `@ResponseBody` | Automatically serializes the return value to JSON |
+
+**Flow without this:**
+```
+POST /api/products → Validation fails → Spring throws exception → Client gets 500 HTML error page
+```
+
+**Flow with this:**
+```
+POST /api/products → Validation fails → Spring throws exception → GlobalExceptionHandler catches it → Client gets clean JSON: {"name": "must not be blank"}
+```
+
+---
+
+### `@ExceptionHandler` — Targeting Specific Exceptions
+
+```java
+@ExceptionHandler(MethodArgumentNotValidException.class)
+public Map<String, String> handleValidationExceptions(MethodArgumentNotValidException ex) {
+```
+
+- `@ExceptionHandler(MethodArgumentNotValidException.class)` tells Spring: *"When this specific exception type is thrown anywhere in the app, call this method instead of the default handler."*
+- `MethodArgumentNotValidException` is thrown automatically by Spring when `@Valid` or `@Validated` fails on a request body (i.e., a `@RequestBody` annotated parameter fails its bean validation constraints like `@NotBlank`, `@Size`, `@Min`, etc.)
+
+---
+
+### Method 1: `handleValidationExceptions` (Active — has `@ExceptionHandler`)
+
+```java
+Map<String, String> fieldErrors = new LinkedHashMap<>();
+ex.getBindingResult().getFieldErrors()
+        .forEach(fieldError -> fieldErrors.put(
+                fieldError.getField(),
+                fieldError.getDefaultMessage())
+        );
+return fieldErrors;
+```
+
+#### `ex.getBindingResult()`
+- `BindingResult` is Spring's object that holds ALL validation errors collected during binding and validation.
+- It knows which fields failed and why.
+
+#### `.getFieldErrors()`
+- Returns only **field-level** errors (errors tied to a specific field like `name`, `price`, `email`).
+- Each `FieldError` contains:
+  - `.getField()` → the field name (e.g., `"name"`)
+  - `.getDefaultMessage()` → the message from the constraint annotation (e.g., `"must not be blank"`)
+
+#### `LinkedHashMap`
+- Preserves **insertion order** — errors appear in the same order the fields are defined in the class, which is nicer for the API consumer than a random `HashMap`.
+
+**Example output for a failed POST request:**
+```json
+{
+  "name": "Product name must not be blank",
+  "description": "must not be blank",
+  "price": "must be greater than 0"
+}
+```
+
+---
+
+### Method 2: `myMethodArgumentNotValidException` (Inactive — no `@ExceptionHandler`)
+
+```java
+public Map<String, String> myMethodArgumentNotValidException(MethodArgumentNotValidException ex) {
+    ...
+    ex.getBindingResult()
+            .getAllErrors()
+            ...
+```
+
+This method **will never be called** because it has no `@ExceptionHandler` annotation. It is likely a draft or experiment. Key differences from method 1:
+
+| | Method 1 | Method 2 |
+|---|---|---|
+| **Annotation** | `@ExceptionHandler` present ✅ | Missing ❌ — never fires |
+| **Error source** | `.getFieldErrors()` | `.getAllErrors()` |
+| **Scope** | Field-level errors only | Field + class-level errors |
+| **Cast** | Not needed | `((FieldError) error)` cast required |
+
+#### Why `.getAllErrors()` needs a cast
+`getAllErrors()` returns `List<ObjectError>`. `ObjectError` is the parent class. `FieldError` extends `ObjectError` and adds `.getField()`. Since `ObjectError` doesn't have `.getField()`, you must cast down: `((FieldError) error).getField()`. This cast would crash (`ClassCastException`) if a class-level constraint error (not a field error) was in the list.
+
+---
+
+### The Bug / Issue to Fix
+
+The second method `myMethodArgumentNotValidException` has two problems:
+
+1. **No `@ExceptionHandler`** — it is dead code, never invoked.
+2. **Unsafe cast** — if `getAllErrors()` contains a non-`FieldError` `ObjectError`, the cast to `FieldError` throws `ClassCastException`.
+
+You should either delete it, or if you intended to capture class-level errors too, fix it like this:
+
+```java
+@ExceptionHandler(MethodArgumentNotValidException.class)
+public Map<String, String> handleAllValidationErrors(MethodArgumentNotValidException ex) {
+    Map<String, String> fieldErrors = new LinkedHashMap<>();
+    ex.getBindingResult().getAllErrors().forEach(error -> {
+        String fieldName = (error instanceof FieldError fe) ? fe.getField() : error.getObjectName();
+        String errorMessage = error.getDefaultMessage();
+        fieldErrors.put(fieldName, errorMessage);
+    });
+    return fieldErrors;
+}
+```
+
+---
+
+### Full Request Lifecycle (How it all fits together)
+
+```
+Client sends POST /api/category
+         │
+         ▼
+  @PostMapping method in Controller
+  @RequestBody @Valid CategoryDTO dto    ← @Valid triggers validation
+         │
+  Hibernate Validator runs @NotBlank, @Size, etc. on CategoryDTO fields
+         │
+         ├── All valid → method executes normally
+         │
+         └── Any invalid → Spring throws MethodArgumentNotValidException
+                    │
+                    ▼
+         GlobalExceptionHandler.handleValidationExceptions()
+                    │
+                    ▼
+         Returns Map<String, String> → Spring serializes to JSON → 400 response to client
+```
+
+---
+
+### Summary of Key Concepts
+
+| Concept | Purpose |
+|---|---|
+| `@RestControllerAdvice` | Intercepts exceptions app-wide and returns JSON |
+| `@ExceptionHandler` | Routes a specific exception type to a handler method |
+| `MethodArgumentNotValidException` | Thrown when `@Valid` fails on `@RequestBody` |
+| `BindingResult` | Holds all validation errors |
+| `getFieldErrors()` | Field-specific errors only |
+| `getAllErrors()` | All errors including class-level |
+| `LinkedHashMap` | Preserves field order in the JSON response |
+
+The main thing to remember: without `@ExceptionHandler` on method 2, it is completely ignored by Spring — it is just an ordinary method that happens to sit in the class.
+
+---
+
+### 20.1 Interview Questions — GlobalExceptionHandler
+
+**Q80. What does `@RestControllerAdvice` do?**
+It marks a class as a global exception handler for all controllers. It combines `@ControllerAdvice` (intercepts exceptions app-wide) and `@ResponseBody` (serializes return values to JSON automatically).
+
+**Q81. What does `@ExceptionHandler` do?**
+It maps a specific exception type to a handler method. When that exception is thrown anywhere in the app, Spring calls the annotated method instead of the default error handler.
+
+**Q82. What is `MethodArgumentNotValidException` and when is it thrown?**
+It is thrown by Spring when `@Valid` or `@Validated` on a `@RequestBody` parameter fails. It carries all the validation errors collected by Hibernate Validator.
+
+**Q83. What is `BindingResult`?**
+An object that holds all validation errors after Spring binds and validates a request. It contains field errors (tied to a specific field) and global errors (tied to the whole object).
+
+**Q84. What is the difference between `getFieldErrors()` and `getAllErrors()` on `BindingResult`?**
+`getFieldErrors()` returns only field-level errors tied to a specific field name. `getAllErrors()` returns all errors including class-level constraint errors that are not tied to any single field.
+
+**Q85. Why does method 2 (`myMethodArgumentNotValidException`) never get called?**
+It has no `@ExceptionHandler` annotation. Without it, Spring has no reason to call that method when an exception is thrown. It is treated as an ordinary, unreachable method.
+
+**Q86. Why is `LinkedHashMap` used instead of `HashMap` for the error response?**
+`LinkedHashMap` preserves insertion order, so errors appear in the same order as the fields in the class. A `HashMap` has no guaranteed order, making the response unpredictable for the API consumer.
+
+**Q87. Why is the cast `((FieldError) error)` in method 2 unsafe?**
+`getAllErrors()` can return both `FieldError` and `ObjectError` instances. `ObjectError` is the parent and does not have a `.getField()` method. Casting a plain `ObjectError` to `FieldError` throws `ClassCastException` at runtime.
+
+**Q88. What HTTP status code does `MethodArgumentNotValidException` return by default?**
+400 Bad Request.
+
+**Q89. How would you safely handle both field-level and class-level errors in one handler?**
+Use `instanceof` to check the type before casting:
+```java
+String fieldName = (error instanceof FieldError fe) ? fe.getField() : error.getObjectName();
+```
+This avoids `ClassCastException` when a non-field error is in the list.
+
+**Q90. Can you have multiple `@ExceptionHandler` methods in one `@RestControllerAdvice` class?**
+Yes. Each method handles a different exception type. Spring picks the most specific matching handler when an exception is thrown.
