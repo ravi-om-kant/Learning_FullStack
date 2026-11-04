@@ -2141,3 +2141,211 @@ A status instruction — either a `ResponseEntity` wrapping the return value, or
 
 **Q95. Does returning a plain `Map` from a `@RestControllerAdvice` method affect the body?**
 No. The body is serialized correctly to JSON regardless. Only the HTTP status is wrong when no status is specified.
+
+---
+
+## 21. Custom Exceptions — Why and How
+
+### 21.1 Why not just use `ResponseStatusException`?
+
+`ResponseStatusException` works, but it has three problems when used inside the service layer:
+
+**Problem 1 — It mixes HTTP into the service layer**
+
+```java
+// Service layer — should only know business logic
+.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Category not found"));
+```
+
+The service now knows about `HttpStatus`, which is an HTTP concept. The service should only know *what went wrong* (category not found), not *how to express it over HTTP* (404). That mapping belongs in the handler.
+
+**Problem 2 — The error message is a loose string, not structured data**
+
+`ResponseStatusException` carries a `String reason`. You cannot attach structured fields like resource name, field name, or field value. The handler gets a string and can only forward it as-is.
+
+**Problem 3 — Every caller formats the message differently**
+
+```java
+// In deleteCategory
+new ResponseStatusException(HttpStatus.NOT_FOUND, "Category not found")
+
+// In updateCategory
+new ResponseStatusException(HttpStatus.NOT_FOUND, "Resource Not Found")
+```
+
+There is no consistency. Each developer writes their own message.
+
+---
+
+### 21.2 What a custom exception gives you
+
+| Concern | `ResponseStatusException` | Custom exception |
+|---|---|---|
+| Where HTTP status lives | Inside the service | In `GlobalExceptionHandler` only |
+| What the service throws | An HTTP concept | A domain concept (`ResourceNotFound`) |
+| Structured data on the exception | No | Yes — fields, IDs, resource names |
+| Consistent message format | Only if you remember | Always — the constructor enforces it |
+| Readable throw site | Moderate | High — the class name explains intent |
+| Testing | Test the status code | Test the exception type and its fields |
+
+---
+
+### 21.3 Your current custom exception — `ResponseNotFoundException`
+
+```java
+package com.ecommerce.project.exceptions;
+
+public class ResponseNotFoundException extends RuntimeException {
+
+    String resourceName;
+    String fieldName;
+    String field;
+    Long fieldId;
+
+    // Constructor for String-valued fields
+    public ResponseNotFoundException(String message, String resourceName, String fieldName, String field) {
+        super(String.format("%s not found with %s: %s", resourceName, field, fieldName));
+        this.resourceName = resourceName;
+        this.fieldName = fieldName;
+        this.field = field;
+    }
+
+    // Constructor for Long-valued fields (IDs)
+    public ResponseNotFoundException(String message, String resourceName, Long fieldId) {
+        super(String.format("%s not found with %s: %d", message, resourceName, fieldId));
+        this.resourceName = resourceName;
+        this.field = field;   // ← bug: 'field' here is the unset instance variable (null), not a parameter
+        this.fieldId = fieldId;
+    }
+}
+```
+
+Key design decisions:
+- Extends `RuntimeException` — no `throws` clause needed anywhere.
+- Takes the resource name and field info as constructor parameters — the message is built once, consistently.
+- The service throws it with meaning: `new ResponseNotFoundException("Category", "categoryId", categoryId)` reads like English.
+
+**How the service uses it:**
+
+```java
+// deleteCategory
+Category category = categoryRepository.findById(categoryId)
+        .orElseThrow(() -> new ResponseNotFoundException("DeleteCategory", "categoryId", categoryId));
+
+// updateCategory
+Category savedCategory = categoryRepository.findById(categoryId)
+        .orElseThrow(() -> new ResponseNotFoundException("Category", "categoryId", categoryId));
+```
+
+The service no longer imports `HttpStatus`. It only says "this resource was not found" and passes the details. The handler decides the status code.
+
+---
+
+### 21.4 The missing piece — a handler for it in `GlobalExceptionHandler`
+
+Right now `GlobalExceptionHandler` only handles `MethodArgumentNotValidException`. `ResponseNotFoundException` has no handler, so Spring falls back to its default and returns **500 Internal Server Error**.
+
+To fix that, add a second handler:
+
+```java
+@RestControllerAdvice
+public class GlobalExceptionHandler {
+
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    public ResponseEntity<Map<String, String>> handleValidationExceptions(MethodArgumentNotValidException ex) {
+        Map<String, String> fieldErrors = new LinkedHashMap<>();
+        ex.getBindingResult().getFieldErrors()
+                .forEach(err -> fieldErrors.put(err.getField(), err.getDefaultMessage()));
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(fieldErrors);
+    }
+
+    @ExceptionHandler(ResponseNotFoundException.class)
+    public ResponseEntity<Map<String, String>> handleResponseNotFoundException(ResponseNotFoundException ex) {
+        Map<String, String> response = new LinkedHashMap<>();
+        response.put("message", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
+    }
+}
+```
+
+Now the HTTP status (404) lives only in the handler. The service never mentions it.
+
+---
+
+### 21.5 Full workflow — end to end
+
+```
+Client sends DELETE /api/admin/categories/99
+         │
+         ▼
+  CategoryController.deleteCategory(99L)
+         │
+         ▼
+  categoryRepository.findById(99L)   → Optional.empty()
+         │
+         ▼
+  .orElseThrow(() -> new ResponseNotFoundException("DeleteCategory", "categoryId", 99L))
+         │
+         ▼
+  ResponseNotFoundException is thrown
+  getMessage() → "DeleteCategory not found with categoryId: 99"
+         │
+         ▼
+  Spring sees an unhandled exception, checks @RestControllerAdvice beans
+         │
+         ▼
+  GlobalExceptionHandler.handleResponseNotFoundException(ex) is called
+         │
+         ▼
+  Returns ResponseEntity:
+    Status: 404 Not Found
+    Body:   { "message": "DeleteCategory not found with categoryId: 99" }
+         │
+         ▼
+  Client receives:
+  HTTP/1.1 404 Not Found
+  Content-Type: application/json
+  { "message": "DeleteCategory not found with categoryId: 99" }
+```
+
+---
+
+### 21.6 Known issue in the current `ResponseNotFoundException`
+
+In constructor 2 (the 3-parameter one), there is a bug:
+
+```java
+public ResponseNotFoundException(String message, String resourceName, Long fieldId) {
+    super(String.format("%s not found with %s: %d", message, resourceName, fieldId));
+    this.resourceName = resourceName;
+    this.field = field;   // ← 'field' is the instance variable, not a parameter — always null
+    this.fieldId = fieldId;
+}
+```
+
+`field` on the right side of the assignment refers to the instance variable `field`, which has never been set, so it is always `null`. The parameter `String field` does not exist in this constructor. The line assigns `null` to `null` — harmless but useless and confusing. If you need `field` stored, the constructor needs a `String field` parameter.
+
+---
+
+### 21.7 Interview Questions — Custom Exceptions
+
+**Q96. Why is throwing `ResponseStatusException` from the service layer a bad practice?**
+It couples the service to HTTP concepts. The service should only express what went wrong in domain terms. Mapping that to an HTTP status code is the responsibility of the exception handler in the web layer.
+
+**Q97. What does extending `RuntimeException` give a custom exception?**
+It makes the exception unchecked, so no method in the call chain needs a `throws` clause. Spring's exception handling works with unchecked exceptions seamlessly.
+
+**Q98. What happens if you throw a custom exception that has no `@ExceptionHandler` in `@RestControllerAdvice`?**
+Spring falls back to its default error handler and returns `500 Internal Server Error`, even if the exception represents a "not found" situation.
+
+**Q99. How does a custom exception keep the error message consistent?**
+The message format is built inside the constructor with `String.format(...)`. Every caller passes the same kind of data (resource name, field name, value), and the constructor always formats it the same way.
+
+**Q100. What is the difference between `ex.getMessage()` and `ex.getReason()` in an exception handler?**
+`getMessage()` is a method on `Throwable` (the root of all exceptions) and returns the message passed to `super(...)`. `getReason()` is specific to `ResponseStatusException`. For a custom exception that extends `RuntimeException`, use `getMessage()`.
+
+**Q101. Where should the HTTP status code live — in the service or in the handler?**
+In the handler only. The service throws a domain exception describing what went wrong. The handler decides what HTTP status that maps to and builds the response.
+
+**Q102. What is the advantage of storing fields like `resourceName` and `fieldId` on the exception object?**
+The handler can read them to build a richer, structured response — for example separate JSON keys for the resource name and the missing ID — rather than parsing a string message.

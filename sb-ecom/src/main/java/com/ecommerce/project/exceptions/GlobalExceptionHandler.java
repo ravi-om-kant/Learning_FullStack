@@ -77,4 +77,10 @@ public class GlobalExceptionHandler {
         return ResponseEntity.badRequest().body(body);
     }
 
+    // ResponseStatusException Custom Exception
+    @ExceptionHandler(ResponseNotFoundException.class)
+    ResponseEntity<String> myResponseNotFoundException(ResponseNotFoundException e){
+        String message = e.getMessage();
+        return new ResponseEntity<>(message, HttpStatus.NOT_FOUND);
+    }
 }
