@@ -2349,3 +2349,218 @@ In the handler only. The service throws a domain exception describing what went 
 
 **Q102. What is the advantage of storing fields like `resourceName` and `fieldId` on the exception object?**
 The handler can read them to build a richer, structured response — for example separate JSON keys for the resource name and the missing ID — rather than parsing a string message.
+
+---
+
+## 22. `APIException` — General Purpose Custom Exception
+
+### 22.1 The class
+
+```java
+package com.ecommerce.project.exceptions;
+
+import org.springframework.http.HttpStatus;
+
+public class APIException extends RuntimeException {
+
+    private static final long serialVersionUID = 1L;
+
+    private final HttpStatus status;
+
+    public APIException() {
+        super();
+        this.status = HttpStatus.INTERNAL_SERVER_ERROR;   // default: 500
+    }
+
+    public APIException(String message) {
+        this(message, HttpStatus.BAD_REQUEST);            // default: 400
+    }
+
+    public APIException(String message, HttpStatus status) {
+        super(message);
+        this.status = status;                             // caller chooses the status
+    }
+
+    public HttpStatus getStatus() {
+        return status;
+    }
+}
+```
+
+---
+
+### 22.2 What makes it different from `ResponseNotFoundException`
+
+| Point | `ResponseNotFoundException` | `APIException` |
+|---|---|---|
+| **Purpose** | One specific situation: resource not found | General — any API-level business error |
+| **HTTP status** | Handler hardcodes `404` | Stored on the exception itself via `getStatus()` |
+| **Constructors** | Takes resource name, field name, field value | Takes a message and an optional `HttpStatus` |
+| **Service throws** | Domain-specific: `new ResponseNotFoundException("Category", "categoryId", 1L)` | General: `new APIException("Duplicate name", HttpStatus.CONFLICT)` |
+| **Handler reads status from** | Does not — handler hardcodes `HttpStatus.NOT_FOUND` | `e.getStatus()` — the exception itself carries it |
+
+---
+
+### 22.3 Three constructors — when to use each
+
+```java
+// 1. No-arg — used when you have no message and want 500
+throw new APIException();
+// Message: null, Status: 500
+
+// 2. Message only — defaults to 400 Bad Request
+throw new APIException("Category name already exists");
+// Message: "Category name already exists", Status: 400
+
+// 3. Message + status — full control
+throw new APIException("Payment service unavailable", HttpStatus.SERVICE_UNAVAILABLE);
+// Message: "Payment service unavailable", Status: 503
+```
+
+The 2-argument constructor delegates to the 3-argument one using `this(message, HttpStatus.BAD_REQUEST)`. This is called **constructor chaining** — one constructor calls another constructor in the same class with `this(...)`.
+
+---
+
+### 22.4 `serialVersionUID` — why it is there
+
+```java
+private static final long serialVersionUID = 1L;
+```
+
+- `Throwable` (the root of all exceptions) implements `java.io.Serializable`.
+- Serializable classes should declare `serialVersionUID` so Java can verify that a serialized object matches the current class when it is deserialized.
+- If you don't declare it, Java computes one automatically from the class structure. If the class changes later, the computed value changes and deserialization from an older version fails.
+- For exceptions, serialization rarely matters in practice (exceptions are not usually saved to disk), but IDEs and static analysis tools warn if it is missing. Setting it to `1L` silences the warning.
+
+---
+
+### 22.5 The handler for `APIException`
+
+```java
+@ExceptionHandler(APIException.class)
+ResponseEntity<String> myAPIException(APIException e) {
+    String message = e.getMessage();
+    return new ResponseEntity<>(message, e.getStatus());   // status comes from the exception
+}
+```
+
+Key point: `e.getStatus()` reads the `HttpStatus` that was stored when the exception was constructed. The handler does not hardcode any status. The same handler works for `400`, `409`, `503`, or any other status the thrower chose.
+
+---
+
+### 22.6 Full updated `GlobalExceptionHandler`
+
+```java
+@RestControllerAdvice
+public class GlobalExceptionHandler {
+
+    // METHOD 1 — validation errors from @Valid on @RequestBody
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public Map<String, String> handleValidationExceptions(MethodArgumentNotValidException ex) {
+        Map<String, String> fieldErrors = new LinkedHashMap<>();
+        ex.getBindingResult().getFieldErrors()
+                .forEach(fieldError -> fieldErrors.put(
+                        fieldError.getField(),
+                        fieldError.getDefaultMessage()));
+        return fieldErrors;
+    }
+
+    // METHOD 3 — constraint violations from @Validated on @PathVariable / @RequestParam
+    @ExceptionHandler(ConstraintViolationException.class)
+    public ResponseEntity<Map<String, Object>> handleConstraintViolation(ConstraintViolationException ex) {
+        Map<String, String> fieldErrors = new LinkedHashMap<>();
+        ex.getConstraintViolations().forEach(violation ->
+                fieldErrors.put(
+                        violation.getPropertyPath().toString(),
+                        violation.getMessage()));
+        return badRequest(fieldErrors);
+    }
+
+    // Helper — builds a structured 400 body
+    ResponseEntity<Map<String, Object>> badRequest(Map<String, String> fieldErrors) {
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("status", HttpStatus.BAD_REQUEST.value());
+        body.put("error", "Validation failed");
+        body.put("fieldErrors", fieldErrors);
+        return ResponseEntity.badRequest().body(body);
+    }
+
+    // Custom exception — resource not found
+    @ExceptionHandler(ResponseNotFoundException.class)
+    ResponseEntity<String> myResponseNotFoundException(ResponseNotFoundException e) {
+        return new ResponseEntity<>(e.getMessage(), HttpStatus.NOT_FOUND);
+    }
+
+    // Custom exception — general API business error
+    @ExceptionHandler(APIException.class)
+    ResponseEntity<String> myAPIException(APIException e) {
+        return new ResponseEntity<>(e.getMessage(), e.getStatus());
+    }
+}
+```
+
+---
+
+### 22.7 `ConstraintViolationException` vs `MethodArgumentNotValidException`
+
+These are two different exceptions for two different validation triggers:
+
+| | `MethodArgumentNotValidException` | `ConstraintViolationException` |
+|---|---|---|
+| **Triggered by** | `@Valid` on `@RequestBody` | `@Validated` on the class + constraint on `@PathVariable` or `@RequestParam` |
+| **Thrown by** | Spring MVC | Hibernate Validator (Bean Validation) |
+| **Errors read from** | `ex.getBindingResult().getFieldErrors()` | `ex.getConstraintViolations()` |
+| **Example** | POST body with blank `categoryName` | GET `/categories/{id}` where `id` fails `@Min(1)` |
+
+---
+
+### 22.8 Constructor chaining with `this(...)`
+
+```java
+public APIException(String message) {
+    this(message, HttpStatus.BAD_REQUEST);   // calls the 3-arg constructor
+}
+```
+
+- `this(...)` inside a constructor calls another constructor in the **same class**.
+- It must be the **first statement** in the constructor body.
+- It avoids duplicating the `super(message)` call and status assignment in every constructor.
+- Do not confuse with `super(...)`, which calls a constructor in the **parent class**.
+
+---
+
+### 22.9 When to use which exception
+
+| Situation | Throw |
+|---|---|
+| A required resource is not found (404) | `ResponseNotFoundException` |
+| A business rule is violated (e.g. duplicate name) | `APIException("Duplicate category name")` — defaults to 400 |
+| An external service is down | `APIException("Payment service unavailable", HttpStatus.SERVICE_UNAVAILABLE)` |
+| Input validation fails on `@RequestBody` | Let `@Valid` throw `MethodArgumentNotValidException` automatically |
+| Input validation fails on `@PathVariable` | Let `@Validated` throw `ConstraintViolationException` automatically |
+
+---
+
+### 22.10 Interview Questions — `APIException`
+
+**Q103. What is the key design difference between `APIException` and `ResponseNotFoundException`?**
+`APIException` stores the `HttpStatus` on itself via a constructor parameter and exposes it through `getStatus()`. The handler reads that status dynamically. `ResponseNotFoundException` carries no status — the handler hardcodes `HttpStatus.NOT_FOUND` for it.
+
+**Q104. What does constructor chaining with `this(...)` do?**
+It calls another constructor in the same class. It must be the first statement. It is used to avoid repeating shared logic across constructors.
+
+**Q105. What is `serialVersionUID` and why is it set to `1L` on `APIException`?**
+`Throwable` implements `Serializable`, so all exceptions can be serialized. `serialVersionUID` is the version token used during deserialization to confirm the class has not changed. Setting it to `1L` explicitly prevents IDE warnings and avoids deserialization failures if the class is later modified.
+
+**Q106. What is the difference between `MethodArgumentNotValidException` and `ConstraintViolationException`?**
+`MethodArgumentNotValidException` is thrown when `@Valid` fails on a `@RequestBody`. `ConstraintViolationException` is thrown when `@Validated` is on the class and a constraint on `@PathVariable` or `@RequestParam` fails.
+
+**Q107. Why can the same `@ExceptionHandler(APIException.class)` method handle both 400 and 503 responses?**
+Because it reads the status from `e.getStatus()` instead of hardcoding it. The thrower decides the status at the time the exception is constructed, and the handler just forwards it.
+
+**Q108. What is the default HTTP status when `new APIException(message)` is thrown?**
+400 Bad Request. The single-argument constructor delegates to `this(message, HttpStatus.BAD_REQUEST)`.
+
+**Q109. What happens when `new APIException()` (no arguments) is thrown?**
+The message is `null` and the status is `500 Internal Server Error`, since the no-arg constructor sets `this.status = HttpStatus.INTERNAL_SERVER_ERROR`.

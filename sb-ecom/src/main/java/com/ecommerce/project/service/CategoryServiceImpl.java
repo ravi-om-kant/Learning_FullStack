@@ -1,5 +1,6 @@
 package com.ecommerce.project.service;
 
+import com.ecommerce.project.exceptions.APIException;
 import com.ecommerce.project.exceptions.ResponseNotFoundException;
 import com.ecommerce.project.model.Category;
 import com.ecommerce.project.repositories.CategoryRepository;
@@ -25,7 +26,11 @@ public class CategoryServiceImpl implements CategoryService {
 //        return List.of();
 //        ResponseStatusException categoryListCreated = new ResponseStatusException(HttpStatus.CREATED, categoryList.toString());
 //        return categoryList;
-        return categoryRepository.findAll();
+        List<Category> categoryList = categoryRepository.findAll();
+        if(categoryList.isEmpty()){
+            throw new APIException("Category List is Empty", HttpStatus.NO_CONTENT);
+        }
+        return categoryList;
     }
 
     @Override
@@ -36,7 +41,10 @@ public class CategoryServiceImpl implements CategoryService {
 //        categoryList.add(category);
 //        return "Category created successfully: " + categoryList.get(categoryList.size()-1)
 //                + " | All categories: " + categoryList+"RequestBody: "+category.toString();
-
+        Category savedCategory = categoryRepository.findByCategoryName(category.getCategoryName());
+        if(!Objects.isNull(savedCategory)) {
+            throw new APIException("Category with the name '"+category.getCategoryName()+"' already exists !!!");
+        }
         categoryRepository.save(category);
     }
 
