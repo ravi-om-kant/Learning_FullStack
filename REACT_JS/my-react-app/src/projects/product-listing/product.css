@@ -1,0 +1,50 @@
+.product--main{
+    
+    .product--header{
+        display: flex;
+        justify-content: space-between;
+        padding: 1rem 2rem;
+        background-color: rgb(3, 33, 97);
+        align-items: center;
+        box-shadow: 10px;
+        /* align-content: center; */
+        /* position: fixed; */
+        /* width: 100%; */
+    }
+    .product--lists {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        .card {
+            margin: 10px 5px;
+            padding: 1rem 1rem;
+            border: 1px solid whitesmoke;
+            border-radius: 5px;
+            width: 12rem;
+            text-wrap: initial;
+            .card-image img {
+                width: 8rem;
+                height: auto;
+            }
+        }
+    }
+    .product--filter{
+        display: flex;
+        justify-content: space-between;
+        padding: 1rem 2rem;
+        .product--dropdown{
+            display: flex;
+            .dropdowm{
+                margin: 0 0 0 1rem;
+            }
+        }
+    }
+    .product--pagination{
+        background-color: black;
+        position: fixed;
+        bottom: 0px;
+        width: 100vw;
+        height: 2rem;
+        justify-content: center;
+    }
+}
