@@ -1,12 +1,13 @@
 import React, { useEffect, useState } from 'react'
 import { useDebounce } from '../hooks/useDebounce';
 
-function SearchBar({searchTerm,onSearchChange}) {
+function SearchBar({searchTerm,onSearchChange, setCurrentPage}) {
     const [value, setValue] = useState("");
     const dval = useDebounce(value);
     
     useEffect(() => {
         onSearchChange(dval);
+        setCurrentPage(0);
     },[dval, onSearchChange]);
     
     console.log(dval);

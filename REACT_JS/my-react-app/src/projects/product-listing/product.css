@@ -1,6 +1,8 @@
-.product--main{
-    
-    .product--header{
+.product--main {
+
+    text-align: center;
+
+    .product--header {
         display: flex;
         justify-content: space-between;
         padding: 1rem 2rem;
@@ -11,10 +13,12 @@
         /* position: fixed; */
         /* width: 100%; */
     }
+
     .product--lists {
         display: flex;
         flex-wrap: wrap;
         justify-content: center;
+
         .card {
             margin: 10px 5px;
             padding: 1rem 1rem;
@@ -22,29 +26,37 @@
             border-radius: 5px;
             width: 12rem;
             text-wrap: initial;
+
             .card-image img {
                 width: 8rem;
                 height: auto;
             }
         }
     }
-    .product--filter{
+
+    .product--filter {
         display: flex;
         justify-content: space-between;
         padding: 1rem 2rem;
-        .product--dropdown{
+
+        .product--dropdown {
             display: flex;
-            .dropdowm{
+
+            .dropdowm {
                 margin: 0 0 0 1rem;
             }
         }
     }
-    .product--pagination{
+
+    .product--pagination {
         background-color: black;
-        position: fixed;
+        /* position: fixed; */
         bottom: 0px;
-        width: 100vw;
+        width: 100%;
         height: 2rem;
         justify-content: center;
+        .active--page{
+            background-color: rgb(31, 30, 30);
+        }
     }
 }

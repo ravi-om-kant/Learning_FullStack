@@ -7,12 +7,18 @@ async function request(url, signal) {
   return res.json();
 }
 
-export function getProducts({ searchTerm = '', category = '', sortBy = '' } = {}, signal) {
-  const params = new URLSearchParams({ limit: '0' });
+export function getProducts({
+  searchTerm = '',
+  category = '',
+  sortBy = '',
+  skip = 0,        // ADD THIS
+  limit = 0        // ADD THIS 
+} = {}, signal) {
+  const params = new URLSearchParams({ limit: String(limit), skip: String(skip) });
   const q = searchTerm.trim();
   // const filter = sortBy ? sortBy.split("-") : Array(2).fill("");
-  const [sortByField = "", sortByOrder = ""] = sortBy ? sortBy.split("-") : [];
-  if(sortBy){
+  // const [sortByField = "", sortByOrder = ""] = sortBy ? sortBy.split("-") : [];
+  if (sortBy) {
     const [field, order] = sortBy.split("-");
     params.set('sortBy', field);
     params.set('order', order);

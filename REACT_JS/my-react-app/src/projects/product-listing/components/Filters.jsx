@@ -1,11 +1,11 @@
-import React, { useContext, useEffect, useState } from 'react'
+import { useContext, useEffect, useState } from 'react'
 import SearchBar from './SearchBar'
 import { ProductContext } from '../context/ProductContext';
 import { getCategoryList } from '../services/productService';
 
 // function Filters({searchTerm, onSearchChange}) {
 function Filters() {
-    const { selectCategory, setSelectCategory, searchTerm, setSearchTerm, sortBy, setSortBy } = useContext(ProductContext);
+    const { selectCategory, setSelectCategory, searchTerm, setSearchTerm, sortBy, setSortBy, setCurrentPage } = useContext(ProductContext);
 
     const [category, setCategory] = useState([]);
 
@@ -15,22 +15,24 @@ function Filters() {
         //     .catch(err => alert(err.message));
         const controller = new AbortController();
         getCategoryList(controller.signal)
-        .then(setCategory)
-        .catch(err => {
-            if(err.name !== "AbortError") alert(err.message);
-        })
-        
+            .then(setCategory)
+            .catch(err => {
+                if (err.name !== "AbortError") alert(err.message);
+            })
+
         return () => {
             controller.abort();
         }
     }, []);
 
     const handleChange = (event) => {
-        setSelectCategory(event.target.value)
+        setSelectCategory(event.target.value);
+        setCurrentPage(0);
     }
 
     const handleSortChange = (event) => {
-        setSortBy(event.target.value)
+        setSortBy(event.target.value);
+        setCurrentPage(0);
     }
 
     return (
@@ -38,16 +40,13 @@ function Filters() {
             <SearchBar
                 searchTerm={searchTerm}
                 onSearchChange={setSearchTerm}
+                setCurrentPage={setCurrentPage}
             />
             <div className='product--dropdown'>
                 <div className='product--category dropdowm'>
                     <select value={selectCategory} onChange={handleChange}>
                         <option value={""}>Category</option>
                         {category && category.map(c => <option key={c} value={c}>{`${c.charAt(0).toUpperCase() + c.slice(1, c.length)}`}</option>)}
-                        {/* <option value="fruits">Fruites</option>
-                        <option value={"vegitables"}>Vegitables</option>
-                        <option value={"snaks"}>Snaks</option>
-                        <option value={"kitchen"}>Kitchen</option> */}
                     </select>
                 </div>
                 <div className='product--sort dropdowm'>
