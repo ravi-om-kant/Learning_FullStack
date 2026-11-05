@@ -41,10 +41,10 @@ public class CategoryServiceImpl implements CategoryService {
 //        categoryList.add(category);
 //        return "Category created successfully: " + categoryList.get(categoryList.size()-1)
 //                + " | All categories: " + categoryList+"RequestBody: "+category.toString();
-        Category savedCategory = categoryRepository.findByCategoryName(category.getCategoryName());
-        if(!Objects.isNull(savedCategory)) {
-            throw new APIException("Category with the name '"+category.getCategoryName()+"' already exists !!!");
-        }
+//        Category savedCategory = categoryRepository.findByCategoryName(category.getCategoryName());
+//        if(!Objects.isNull(savedCategory)) {
+//            throw new APIException("Category with the name '"+category.getCategoryName()+"' already exists !!!");
+//        }
         categoryRepository.save(category);
     }
 

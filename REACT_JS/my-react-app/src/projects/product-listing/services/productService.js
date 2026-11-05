@@ -10,21 +10,26 @@ async function request(url, signal) {
 export function getProducts({ searchTerm = '', category = '', sortBy = '' } = {}, signal) {
   const params = new URLSearchParams({ limit: '0' });
   const q = searchTerm.trim();
-  const filter = sortBy ? sortBy.split("-") : Array(2).fill("");
+  // const filter = sortBy ? sortBy.split("-") : Array(2).fill("");
   const [sortByField = "", sortByOrder = ""] = sortBy ? sortBy.split("-") : [];
-
+  if(sortBy){
+    const [field, order] = sortBy.split("-");
+    params.set('sortBy', field);
+    params.set('order', order);
+  }
+  console.log(params);
   // Rule (Option A): search wins; category is applied on the client
   if (q) {
     params.set('q', q);
-    return request(`${BASE_URL}/search?${params}&sortBy=${filter[0]}&order=${filter[1]}`, signal);
+    return request(`${BASE_URL}/search?${params}`, signal);
   }
   if (category) {
     return request(
-      `${BASE_URL}/category/${encodeURIComponent(category)}?${params}&sortBy=${filter[0]}&order=${filter[1]}`,
+      `${BASE_URL}/category/${encodeURIComponent(category)}?${params}`,
       signal
     );
   }
-  return request(`${BASE_URL}?${params}&sortBy=${filter[0]}&order=${filter[1]}`, signal);
+  return request(`${BASE_URL}?${params}`, signal);
 }
 
 export function getCategoryList(signal) {

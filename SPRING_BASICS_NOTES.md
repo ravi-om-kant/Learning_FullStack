@@ -2564,3 +2564,309 @@ Because it reads the status from `e.getStatus()` instead of hardcoding it. The t
 
 **Q109. What happens when `new APIException()` (no arguments) is thrown?**
 The message is `null` and the status is `500 Internal Server Error`, since the no-arg constructor sets `this.status = HttpStatus.INTERNAL_SERVER_ERROR`.
+
+---
+
+## 23. DTOs and Custom Responses (from Pagination concepts)
+
+### 23.1 The problem — returning a raw entity or a plain list
+
+Right now the controller returns `List<Category>` directly:
+
+```java
+@GetMapping("/public/categories")
+public ResponseEntity<List<Category>> getAllCategoryList() {
+    return new ResponseEntity<>(categoryService.getAllCategoryList(), HttpStatus.OK);
+}
+```
+
+This works for small data, but it has three problems:
+
+**Problem 1 — The entity leaks into the API contract**
+
+`Category` is a JPA entity. It has `@Entity`, `@Id`, `@GeneratedValue`, validation annotations. If you rename `categoryId` to `id` in the database, the JSON key changes too — breaking every client that depended on `"categoryId"`.
+
+**Problem 2 — You expose everything in the entity**
+
+If `Category` gains an internal field like `createdAt`, `deletedAt`, or `createdByUserId`, those fields appear in the JSON automatically. The client sees data it was never meant to see.
+
+**Problem 3 — Pagination metadata has nowhere to go**
+
+When you paginate, the client needs more than just the list. It needs:
+- the actual items for this page
+- which page number this is
+- how many items per page
+- how many total items exist
+- how many total pages exist
+- whether this is the last page
+
+A plain `List<Category>` can carry none of that.
+
+---
+
+### 23.2 What is a DTO?
+
+A **DTO (Data Transfer Object)** is a plain Java class whose only job is to carry data between layers. It has no JPA annotations, no business logic, no database knowledge — only fields, getters and setters (or a record).
+
+```java
+// Entity — lives in the database layer
+@Entity
+@Data
+public class Category {
+    @Id
+    @GeneratedValue(strategy = GenerationType.AUTO)
+    private Long categoryId;
+
+    @NotBlank(message = "Category name is Required")
+    private String categoryName;
+}
+
+// DTO — lives in the API layer, what the client actually sees
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+public class CategoryDTO {
+    private Long categoryId;
+    private String categoryName;
+}
+```
+
+They look similar now, but they serve different masters:
+- `Category` is owned by the database. Its shape follows the table.
+- `CategoryDTO` is owned by the API contract. Its shape follows what clients need.
+
+As the project grows they will diverge — the entity gets audit fields, soft-delete flags, version columns; the DTO stays lean and stable.
+
+---
+
+### 23.3 What is a Custom Response?
+
+A **custom response** is a wrapper class that holds not just the data but also metadata about the response — especially pagination info.
+
+For the category list with pagination, it looks like this:
+
+```java
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+public class CategoryResponse {
+    private List<CategoryDTO> content;      // the page's items
+    private Integer pageNumber;             // current page (0-based)
+    private Integer pageSize;              // items per page
+    private Long totalElements;            // total items in the database
+    private Integer totalPages;            // total number of pages
+    private Boolean lastPage;              // true if this is the last page
+}
+```
+
+The client gets one JSON object that answers all questions at once:
+
+```json
+{
+  "content": [
+    { "categoryId": 1, "categoryName": "Electronics" },
+    { "categoryId": 2, "categoryName": "Books" }
+  ],
+  "pageNumber": 0,
+  "pageSize": 2,
+  "totalElements": 10,
+  "totalPages": 5,
+  "lastPage": false
+}
+```
+
+Without `CategoryResponse`, the client would have to make a second call to find out how many pages exist. With it, everything arrives in one response.
+
+---
+
+### 23.4 How Spring Data pagination works
+
+Spring Data JPA has built-in support for pagination through `Pageable` and `Page<T>`.
+
+**Step 1 — Repository: no code needed**
+
+`JpaRepository` already has:
+
+```java
+Page<Category> findAll(Pageable pageable);
+```
+
+You do not write this method. It is inherited from `JpaRepository`.
+
+**Step 2 — Service: build `Pageable`, call the repository, map to DTO**
+
+```java
+@Override
+public CategoryResponse getAllCategories(Integer pageNumber, Integer pageSize) {
+    // Build the page request: which page, how many items
+    Pageable pageDetails = PageRequest.of(pageNumber, pageSize);
+
+    // Repository returns a Page<Category>
+    Page<Category> categoryPage = categoryRepository.findAll(pageDetails);
+
+    // Map each Category entity → CategoryDTO
+    List<CategoryDTO> categoryDTOs = categoryPage.getContent()
+            .stream()
+            .map(category -> new CategoryDTO(
+                    category.getCategoryId(),
+                    category.getCategoryName()))
+            .collect(Collectors.toList());
+
+    // Build the custom response with the data + pagination metadata
+    CategoryResponse categoryResponse = new CategoryResponse();
+    categoryResponse.setContent(categoryDTOs);
+    categoryResponse.setPageNumber(categoryPage.getNumber());
+    categoryResponse.setPageSize(categoryPage.getSize());
+    categoryResponse.setTotalElements(categoryPage.getTotalElements());
+    categoryResponse.setTotalPages(categoryPage.getTotalPages());
+    categoryResponse.setLastPage(categoryPage.isLast());
+
+    return categoryResponse;
+}
+```
+
+**Step 3 — Controller: accept page params, return `CategoryResponse`**
+
+```java
+@GetMapping("/public/categories")
+public ResponseEntity<CategoryResponse> getAllCategories(
+        @RequestParam(name = "pageNumber", defaultValue = "0") Integer pageNumber,
+        @RequestParam(name = "pageSize", defaultValue = "10") Integer pageSize) {
+
+    CategoryResponse categoryResponse = categoryService.getAllCategories(pageNumber, pageSize);
+    return ResponseEntity.ok(categoryResponse);
+}
+```
+
+Client calls:
+```
+GET /api/public/categories?pageNumber=0&pageSize=2
+```
+
+---
+
+### 23.5 What `Page<T>` gives you
+
+`Page<Category>` is the object Spring Data returns from `findAll(pageable)`. It is a wrapper around the results of one page, plus metadata:
+
+| Method | Returns | Meaning |
+|---|---|---|
+| `getContent()` | `List<Category>` | The items on this page |
+| `getNumber()` | `int` | Current page number (0-based) |
+| `getSize()` | `int` | Items per page |
+| `getTotalElements()` | `long` | Total items in the whole table |
+| `getTotalPages()` | `int` | Total number of pages |
+| `isLast()` | `boolean` | Whether this is the last page |
+| `isFirst()` | `boolean` | Whether this is the first page |
+| `hasNext()` | `boolean` | Whether a next page exists |
+| `hasPrevious()` | `boolean` | Whether a previous page exists |
+
+---
+
+### 23.6 Full flow — what happens on `GET /api/public/categories?pageNumber=0&pageSize=2`
+
+```
+Client → GET /api/public/categories?pageNumber=0&pageSize=2
+              │
+              ▼
+  CategoryController.getAllCategories(0, 2)
+              │
+              ▼
+  categoryService.getAllCategories(0, 2)
+              │
+              ▼
+  PageRequest.of(0, 2)   → Pageable object: "page 0, 2 items"
+              │
+              ▼
+  categoryRepository.findAll(pageable)
+              │   Hibernate generates:
+              │   SELECT * FROM categories LIMIT 2 OFFSET 0;
+              │   SELECT COUNT(*) FROM categories;   (for totalElements)
+              ▼
+  Page<Category> {content=[Electronics, Books], total=10, pages=5}
+              │
+              ▼
+  Map List<Category> → List<CategoryDTO>   (strip JPA annotations, keep only API fields)
+              │
+              ▼
+  Build CategoryResponse {content, pageNumber=0, pageSize=2, totalElements=10, totalPages=5, lastPage=false}
+              │
+              ▼
+  ResponseEntity.ok(categoryResponse)
+              │
+              ▼
+  Jackson serializes CategoryResponse → JSON
+              │
+              ▼
+  Client receives:
+  HTTP 200 OK
+  {
+    "content": [
+      {"categoryId": 1, "categoryName": "Electronics"},
+      {"categoryId": 2, "categoryName": "Books"}
+    ],
+    "pageNumber": 0,
+    "pageSize": 2,
+    "totalElements": 10,
+    "totalPages": 5,
+    "lastPage": false
+  }
+```
+
+---
+
+### 23.7 Why not just return `Page<Category>` directly?
+
+Spring Data's `Page<Category>` can be serialized to JSON, but:
+
+1. It includes Spring-internal fields in the JSON (`pageable`, `sort`, `empty`, `first`) that the client doesn't need and may confuse.
+2. It exposes the `Category` entity directly — the same problem as returning `List<Category>`.
+3. `CategoryResponse` gives you full control of the JSON shape. You include only what the client needs, with names you choose.
+
+---
+
+### 23.8 Summary — Entity vs DTO vs Custom Response
+
+| | Entity (`Category`) | DTO (`CategoryDTO`) | Custom Response (`CategoryResponse`) |
+|---|---|---|---|
+| **Lives in** | Database / persistence layer | API / web layer | API / web layer |
+| **Has JPA annotations** | Yes | No | No |
+| **Has validation annotations** | Yes | Optionally | No |
+| **Returned to client** | No (should not be) | Yes | Yes |
+| **Carries pagination metadata** | No | No | Yes |
+| **Changes when DB schema changes** | Yes | No | No |
+| **Purpose** | Map to a table row | Shape the API response for one item | Shape the API response for a collection + metadata |
+
+---
+
+### 23.9 Interview Questions — DTOs and Custom Responses
+
+**Q110. What is a DTO?**
+A Data Transfer Object — a plain class that carries data between layers. It has no JPA annotations, no business logic, and its shape is driven by what the API consumer needs, not what the database stores.
+
+**Q111. Why should you not return a JPA entity directly from a controller?**
+The entity is coupled to the database schema. If the schema changes, the JSON changes too — breaking clients. It may also expose internal fields (audit timestamps, soft-delete flags) that the client should not see.
+
+**Q112. What is a custom response class?**
+A wrapper class that holds both the data (as a list of DTOs) and metadata about the response. In pagination, it includes the page content plus page number, page size, total elements, total pages, and whether this is the last page.
+
+**Q113. What does `PageRequest.of(pageNumber, pageSize)` create?**
+A `Pageable` object that tells Spring Data JPA which page to fetch and how many items per page. Page numbers are 0-based.
+
+**Q114. What does `Page<T>` contain?**
+The items for the current page (`getContent()`), plus metadata: current page number, page size, total elements across all pages, total pages, and whether this is the first or last page.
+
+**Q115. Why is `Page<Category>` not returned directly to the client?**
+It serializes Spring-internal fields (`pageable`, `sort`, `empty`) into the JSON, it exposes the entity, and you lose control of the JSON shape. A custom response class gives you clean, predictable output.
+
+**Q116. What SQL does `findAll(pageable)` generate?**
+Two queries: one `SELECT` with `LIMIT` and `OFFSET` to fetch the page's rows, and one `SELECT COUNT(*)` to compute the total number of elements for `totalPages` and `totalElements`.
+
+**Q117. What is the difference between `pageNumber` and `pageSize`?**
+`pageNumber` is which page you are on (0 = first page). `pageSize` is how many items appear on each page. Page 0 with size 10 fetches rows 1–10; page 1 with size 10 fetches rows 11–20.
+
+**Q118. What does `@RequestParam(defaultValue = "0")` do?**
+It reads a query parameter from the URL. If the client does not send it, the default value is used instead of throwing an error. This allows `GET /categories` and `GET /categories?pageNumber=2` to both work.
+
+**Q119. At which layer should the mapping from Entity to DTO happen?**
+In the service layer. The controller receives a DTO or a custom response from the service. The repository returns entities. The service sits between them and does the conversion, keeping each layer focused on its own concern.
