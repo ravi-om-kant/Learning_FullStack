@@ -6,7 +6,7 @@ function Cart() {
   const { totalCount } = useCart();
 
   return (
-    <button onClick={() => navigate('/cart')} className='cart-btn'>
+    <button onClick={() => navigate('/product/cart')} className='cart-btn'>
       🛒 Cart ({totalCount})
     </button>
   );

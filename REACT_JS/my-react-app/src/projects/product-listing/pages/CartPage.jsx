@@ -8,7 +8,7 @@ function CartPage() {
   return (
     <div className='cart-page'>
       <div className='cart-page-header'>
-        <button onClick={() => navigate('/')} className='back-btn'>
+        <button onClick={() => navigate('/product')} className='back-btn'>
           ← Back to Shopping
         </button>
         <h1>Shopping Cart</h1>
@@ -66,7 +66,7 @@ function CartPage() {
               <span>${totalPrice.toFixed(2)}</span>
             </div>
             <button className='checkout-btn'>Proceed to Checkout</button>
-            <button onClick={() => navigate('/')} className='continue-shopping-btn'>
+            <button onClick={() => navigate('/product')} className='continue-shopping-btn'>
               Continue Shopping
             </button>
             <button onClick={clear} className='clear-cart-btn'>
