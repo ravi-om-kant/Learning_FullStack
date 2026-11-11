@@ -7,6 +7,26 @@ async function request(url, signal) {
   return res.json();
 }
 
+async function fetchWithRetry(url, { signal, retries = 3, delay = 300 } = {}) {
+  for (let attempt = 0; attempt < retries; attempt++) {
+    try {
+      const res = await fetch(url, { signal });
+      if (res.ok) return await res.json();
+
+      const err = new Error(`Request failed (${res.status})`);
+      err.retryable = res.status >= 500; // 5xx is retryable, 4xx is not
+      throw err;
+    } catch (error) {
+      const canRetry = error.name !== "AbortError" && error.retryable !== false;
+      const isLastAttempt = attempt === retries - 1;
+
+      if (!canRetry || isLastAttempt) throw error;
+
+      await new Promise((resolve) => setTimeout(resolve, delay * 2 ** attempt));
+    }
+  }
+}
+
 export function getProducts({
   searchTerm = '',
   category = '',
@@ -30,14 +50,14 @@ export function getProducts({
     return request(`${BASE_URL}/search?${params}`, signal);
   }
   if (category) {
-    return request(
+    return fetchWithRetry(
       `${BASE_URL}/category/${encodeURIComponent(category)}?${params}`,
-      signal
+      { signal }
     );
   }
-  return request(`${BASE_URL}?${params}`, signal);
+  return fetchWithRetry(`${BASE_URL}?${params}`, { signal });
 }
 
 export function getCategoryList(signal) {
-  return request(`${BASE_URL}/category-list`, signal);
+  return fetchWithRetry(`${BASE_URL}/category-list`, { signal });
 }
