@@ -1,0 +1,17 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: nodejs-capstone-project
+    restart: unless-stopped
+
+    ports:
+      - "6550:6543"
+
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: root
+      POSTGRES_DB: nodejs_capstone
+
+      volumes:
+        - postgres_data:/var/lib/postgresql/data
+
