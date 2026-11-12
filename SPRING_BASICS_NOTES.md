@@ -1,3 +1,105 @@
+# Git - Notes
+
+- **Purpose of commit messages**
+  - A commit is a snapshot of changes. Its message helps you and your teammates understand the change without opening every file.
+  - Prefer a short, imperative summary describing one logical change:
+
+    ```text
+    Add category request and response DTOs
+    Protect task routes with JWT authentication
+    ```
+
+  - Avoid vague messages such as `changes` or `fix`, and keep each commit focused when practical.
+
+- **Change the latest commit message**
+  - If the commit is the current `HEAD` and has not been shared, amend its message:
+
+    ```bash
+    git status
+    git commit --amend -m "Add category request and response DTOs"
+    git log -1 --oneline
+    ```
+
+  - `--amend` replaces the latest commit with a new one. If no changes are staged, it changes only the message. Staged changes are included in the replacement commit too, so inspect `git status` first.
+
+- **Change earlier commit messages with interactive rebase**
+  - Inspect the history and choose how many recent commits to review:
+
+    ```bash
+    git log --oneline
+    git rebase -i HEAD~3
+    ```
+
+  - Git opens a todo list. Change `pick` to `reword` (or `r`) for each message you want to edit, then save and close:
+
+    ```text
+    pick a1b2c3d Add category entity
+    reword d4e5f6a Create category repository
+    reword 123abcd Add category DTOs
+    ```
+
+  - Git opens an editor for each `reword` entry. Update the message, save, and close it. Leave entries as `pick` when you do not want to change them.
+  - To review commits on the current branch that are not in `origin/main`:
+
+    ```bash
+    git fetch origin
+    git rebase -i origin/main
+    ```
+
+  - Use `origin/main` only when it is the correct base branch for your work, and review the todo list carefully before saving.
+
+- **What rebase does**
+  - A rebase replays commits from your branch, in order, on top of a chosen base. Interactive rebase can also reword, reorder, combine, or omit commits.
+  - Changing a commit message creates a new commit, so its hash and the hashes of later commits change. Git does not edit the original commits in place; until garbage collection, they can usually be found through the reflog.
+  - Diagram:
+
+    ```text
+    Before:
+    base --- A --- B --- C   (your branch)
+
+    Rebase onto base; reword B and C:
+    base --- A --- B' --- C' (your branch)
+                      ^       ^
+                      new commit IDs
+    ```
+
+- **When to use rebase**
+  - Rebase your own local, unpublished commits to tidy messages or place your work on top of the latest base branch.
+  - Use `git rebase -i` when changing commits older than the latest one.
+  - Use `squash` or `fixup` only when you intentionally want to combine commits; rebase does not combine unrelated changes automatically.
+
+- **When to avoid rebase and how to recover**
+  - Avoid rebasing commits that teammates already rely on. Rewriting shared history makes their commit IDs diverge; coordinate first.
+  - If a rebase stops on a conflict, resolve the files, stage the resolutions with `git add`, and continue with `git rebase --continue`. To abandon the operation and return to the original branch state, use `git rebase --abort`.
+  - If you rewrite commits that were already pushed, a normal push may be rejected. Coordinate with collaborators and, only when appropriate, use `git push --force-with-lease` rather than `--force`. `--force-with-lease` helps avoid overwriting remote work you have not fetched.
+
+- **Example: rename two unpublished commits**
+  - Suppose your branch has two commits above `origin/main`: one for JWT-protected task routes and one for Spring DTOs. Check the working tree, fetch the remote base, and start an interactive rebase:
+
+    ```bash
+    git status
+    git fetch origin
+    git rebase -i origin/main
+    ```
+
+  - Mark both commits `reword`, save the todo list, then enter messages such as:
+
+    ```text
+    Implement JWT authentication and user-scoped task routes
+    Add Spring category DTOs for implementation
+    ```
+
+  - Verify the result before pushing:
+
+    ```bash
+    git log --oneline origin/main..HEAD
+    git status
+    ```
+
+  - The commit contents stay the same; only their messages and commit IDs change. Review commits before pushing, especially for accidental files such as local environment configuration or secrets.
+
+---
+
 # Spring Boot Basics - Notes
 
 ## 1. `toString()` - How an object becomes text
