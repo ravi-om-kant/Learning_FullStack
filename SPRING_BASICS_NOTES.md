@@ -2870,3 +2870,608 @@ It reads a query parameter from the URL. If the client does not send it, the def
 
 **Q119. At which layer should the mapping from Entity to DTO happen?**
 In the service layer. The controller receives a DTO or a custom response from the service. The repository returns entities. The service sits between them and does the conversion, keeping each layer focused on its own concern.
+
+---
+
+## 24. Pagination Request & Response with DTOs — Concept, Pros/Cons, and Our Project
+
+Section 23 showed *what* a DTO and a response wrapper are. This section answers the practical question: **how do I add `page` and `limit` to the API without changing the database?**
+
+### 24.1 The target contract
+
+```
+GET /api/public/categories?page=1&limit=10
+
+200 OK
+{
+  "content": [
+    { "categoryId": 1, "categoryName": "Electronics" },
+    { "categoryId": 2, "categoryName": "Books" }
+  ],
+  "pageNumber": 1,
+  "pageSize": 10,
+  "totalElements": 23,
+  "totalPages": 3,
+  "lastPage": false
+}
+```
+
+Two contracts are involved, and they are independent:
+
+| Contract | What it is | Our example |
+|---|---|---|
+| **Request contract** | Inputs the client sends | `page=1`, `limit=10` (query parameters) |
+| **Response contract** | Output the client receives | `content` + pagination metadata |
+
+Neither contract is the database table. Pagination itself is done by the database (`LIMIT` / `OFFSET`), but the *names and shape* of the parameters and the response are an API decision. That is the layer a DTO controls.
+
+### 24.2 Where each piece lives
+
+```
+ Client
+   |   GET /api/public/categories?page=1&limit=10
+   v
+ +-----------------------------------------+
+ | CONTROLLER  (web layer)                 |
+ |   @RequestParam page, limit             |   <- request contract
+ |   returns CategoryResponse              |   <- response contract
+ +--------------------+--------------------+
+                      | page=1, limit=10
+                      v
+ +-----------------------------------------+
+ | SERVICE  (business layer)               |
+ |   PageRequest.of(page - 1, limit)       |   <- 1-based to 0-based
+ |   Page<Category> -> List<CategoryDTO>   |   <- entity to DTO mapping
+ |   -> CategoryResponse                   |
+ +--------------------+--------------------+
+                      | Pageable
+                      v
+ +-----------------------------------------+
+ | REPOSITORY  (Spring Data JPA)           |
+ |   findAll(Pageable)                     |   <- no code written
+ +--------------------+--------------------+
+                      | SELECT ... LIMIT ? OFFSET ?
+                      | SELECT COUNT(*)
+                      v
+ +-----------------------------------------+
+ | DATABASE  (category table)              |   <- UNCHANGED
+ +-----------------------------------------+
+
+ Return path (inside out):
+
+   Category rows  ->  Page<Category>  ->  List<CategoryDTO>  ->  CategoryResponse  ->  JSON
+   (entity)           (Spring type)       (API item shape)       (API envelope)
+```
+
+The key idea: the database returns entities, the service reshapes them, and the controller only ever exposes the reshaped version. Changing the reshaping (adding a `page` parameter, renaming a metadata field, hiding a column) touches the service and web layers only.
+
+### 24.3 Page numbering: client is 1-based, Spring is 0-based
+
+Humans count pages from 1. Spring Data counts from 0. The service converts between them:
+
+| Client sends | Spring `PageRequest.of(...)` | Rows fetched (limit 10) |
+|---|---|---|
+| `page=1` | `PageRequest.of(0, 10)` | 1 to 10 |
+| `page=2` | `PageRequest.of(1, 10)` | 11 to 20 |
+| `page=3` | `PageRequest.of(2, 10)` | 21 to 30 |
+| `page=0` | `PageRequest.of(-1, 10)` **throws** | must be rejected with a 400 |
+
+Section 23 used `pageNumber` (0-based) in the examples. Either choose 0-based everywhere, or keep the client-facing `page` 1-based and convert once in the service, as above. Pick one and document it; mixing them is the most common pagination bug.
+
+### 24.4 The concept: a DTO is a boundary
+
+```
+   DATABASE          |        SERVICE         |             API (what clients see)
+                     |                        |
+ category row  -->  Category (entity)  -->  CategoryDTO  -->  CategoryResponse --> JSON
+ (table shape)      (DB-owned)              (API-owned)       (API-owned envelope)
+                     |                        |
+                     |<--- mapping happens here
+```
+
+- The **entity** follows the database. It changes when the table changes.
+- The **DTO / response** follows the API contract. It changes when the client needs something different.
+- The **boundary** is the place where one is converted into the other. Without a DTO, the boundary does not exist and the two shapes are the same class.
+
+### 24.5 Pros of using DTOs for pagination
+
+1. **Add API fields without changing the DB.** `page`, `limit`, `totalPages`, `lastPage` live only in the request and response classes. The `category` table and `ddl-auto=update` are not involved.
+2. **Control the response shape.** You decide the field names and which fields appear. Internal columns (audit timestamps, soft-delete flags) stay hidden.
+3. **Separate request and response shapes.** A create request may need `categoryName` only, while the response also includes `categoryId`. One entity cannot express both cleanly.
+4. **Safe to evolve.** Renaming a column does not rename the JSON key. You can ship `CategoryDTOv2` alongside `v1` while old clients keep working.
+5. **Avoids serialization failures as the model grows.** When `Category` gets a `List<Product>` relationship, returning the entity lets Jackson walk lazy Hibernate proxies (a common source of `LazyInitializationException` and infinite recursion). A DTO contains only the fields you map.
+6. **Smaller payloads.** Only the fields the screen needs are sent.
+7. **Per-operation validation.** `@NotBlank` on a create request DTO does not force the same rule on an update, or on a response.
+
+### 24.6 Cons of using DTOs
+
+1. **More files and more code.** Every entity typically gets a response DTO, a request DTO, and a mapping method. For a one-table CRUD app this feels like ceremony.
+2. **Mapping code to maintain.** Each new field must be added in the entity, the DTO, and the mapper. Forget one and the field silently comes back `null`; the compiler does not warn you.
+3. **Duplication and drift.** Two classes describe the same data. They can fall out of sync.
+4. **Performance cost is negligible, but not zero.** Copying fields is cheap, but mapping large lists allocates new objects. This rarely matters, but it is a cost.
+5. **Over-engineering risk.** A tiny app may never need the decoupling, and the boilerplate slows learning or prototyping.
+6. **Tooling dependency if automated.** MapStruct or ModelMapper remove the boilerplate but add build configuration and a new thing to debug.
+
+Summary: DTOs trade **upfront code** for **long-term decoupling**. They pay off as the API grows, the entity grows, or more than one client depends on the API.
+
+### 24.7 Drawbacks of NOT using DTOs (returning the entity directly)
+
+| Drawback | What it looks like |
+|---|---|
+| **API coupled to the table** | Renaming `categoryName` to `name` in the entity silently breaks clients. |
+| **Internal data leaks** | Any field added to the entity appears in every response automatically. |
+| **Cannot add envelope fields without changing the return type** | `List<Category>` has nowhere to put `totalPages`. You must change the signature anyway. |
+| **Input and output are the same class** | `@Id` can be sent by the client on create (see 24.8). |
+| **Validation rules are shared** | The same `@NotBlank` applies to create, update and every read path. |
+| **Relationship crashes later** | Entity relationships are serialized by Jackson, causing lazy-load errors or cycles. |
+
+Not using a DTO is **not** always wrong. For a single-table app with no relationships and no pagination metadata, returning the entity is simple and acceptable. The cost grows with each of the drawbacks above.
+
+### 24.8 Analysis of our current project (`sb-ecom`)
+
+The project today has one entity (`Category`) and no DTO classes. These are the relevant facts, with file references:
+
+| # | Location | What the code does | Effect on pagination |
+|---|---|---|---|
+| 1 | `CategoryController.java:34` | `GET /public/categories` returns `ResponseEntity<List<Category>>` | The entity is the response. There is no place for `totalPages` or `lastPage`. |
+| 2 | `CategoryServiceImpl.java:25-31` | Throws `APIException(NO_CONTENT)` when the table is empty | For pagination, a page past the end should return **200 with empty `content`** and the correct totals, not an error. The check has to be redesigned. |
+| 3 | `CategoryController.java:44` | `POST` takes `@Valid @RequestBody Category` | The client can send `categoryId`. Spring Data `save()` treats a non-null id as an existing row and calls `merge`, so a POST with an existing id can **overwrite** that category. This is a real risk to verify with the H2 console. A `CategoryRequestDTO` without `categoryId` makes it impossible. |
+| 4 | `CategoryController.java:49` | The `POST` success message concatenates the whole category list into a string | Returning the full list on every write does not scale. Pagination makes it worse. A `CategoryDTO` response is the right fix. |
+| 5 | `CategoryController.java:63` | `PUT` takes `@RequestBody Category` **without `@Valid`** | The `@NotBlank` and `@Size(min = 5)` rules are not enforced on update. A DTO with `@Valid` closes this gap. |
+| 6 | `Category.java` | One class is the JPA entity, the validation model, and the JSON shape | This is the single-class design that DTOs split. |
+| 7 | `application.properties` | `ddl-auto=update`, H2 in-memory | Adding DTO classes does not touch the schema. A new field on the entity would, so DTO classes are the safer place to add API-only fields. |
+
+#### What changes to add pagination, with the database untouched
+
+| Layer | Change | Database change? |
+|---|---|---|
+| Model `Category` | None | No |
+| Repository `CategoryRepository` | None. `JpaRepository` already provides `findAll(Pageable)` | No |
+| New `CategoryDTO` | Create | No |
+| New `CategoryResponse` | Create the envelope | No |
+| `CategoryService` / `Impl` | New method returning `CategoryResponse`, with mapping | No |
+| `CategoryController` | Add `page` and `limit` as `@RequestParam` | No |
+
+Sketch of the changes (not yet applied to the project):
+
+```java
+// NEW: API item shape (no JPA annotations)
+public record CategoryDTO(Long categoryId, String categoryName) {}
+
+// NEW: API envelope
+public record CategoryResponse(
+        List<CategoryDTO> content,
+        Integer pageNumber,
+        Integer pageSize,
+        Long totalElements,
+        Integer totalPages,
+        Boolean lastPage) {}
+```
+
+```java
+// Controller: the two request parameters
+@GetMapping("/public/categories")
+public ResponseEntity<CategoryResponse> getAllCategories(
+        @RequestParam(name = "page", defaultValue = "1") @Min(1) Integer page,
+        @RequestParam(name = "limit", defaultValue = "10") @Min(1) @Max(100) Integer limit) {
+    return ResponseEntity.ok(categoryService.getAllCategories(page, limit));
+}
+```
+
+```java
+// Service: the conversion lives here
+@Override
+public CategoryResponse getAllCategories(Integer page, Integer limit) {
+    Pageable pageable = PageRequest.of(page - 1, limit);          // 1-based to 0-based
+    Page<Category> categoryPage = categoryRepository.findAll(pageable);
+
+    List<CategoryDTO> content = categoryPage.getContent().stream()
+            .map(c -> new CategoryDTO(c.getCategoryId(), c.getCategoryName()))
+            .toList();
+
+    return new CategoryResponse(
+            content,
+            page,
+            limit,
+            categoryPage.getTotalElements(),
+            categoryPage.getTotalPages(),
+            categoryPage.isLast());
+}
+```
+
+Notes on the sketch:
+- `@Min` / `@Max` need `@Validated` on the controller class to take effect as method-parameter validation. Without it, `page=0` reaches `PageRequest.of(-1, ...)` and throws. Either add `@Validated` or check the value manually.
+- The request/response names are a choice. `page`/`limit` in the URL and `pageNumber`/`pageSize` in the body is a common style, and keeping them distinct makes the 1-based and 0-based difference visible.
+- An empty table or an out-of-range page now returns `200` with `content: []`. The `APIException(NO_CONTENT)` check in `CategoryServiceImpl` should be removed, or the endpoint will still fail on an empty table.
+
+#### Middle option: pagination without a DTO
+
+If you want to keep returning entities, a generic wrapper still works:
+
+```java
+public record PageResponse<T>(List<T> content, int pageNumber, int pageSize,
+                              long totalElements, int totalPages, boolean lastPage) {}
+```
+
+`PageResponse<Category>` gives the envelope without a DTO. It still exposes the entity, so drawbacks in 24.7 remain. It is a valid stepping stone; the DTO is the step that removes the coupling.
+
+#### Recommendation for this project
+
+1. Add `CategoryDTO` and `CategoryResponse` first. This gives pagination with no DB change.
+2. Add a `CategoryRequestDTO` (`categoryName` only, with `@NotBlank` and `@Size`) and use it for `POST` and `PUT`. This closes findings 3 and 5.
+3. Remove the `NO_CONTENT` exception from the list path and return `200` with empty content.
+4. Verify finding 3 with a quick test before changing it: POST a category with an existing `categoryId` and check whether the name changes.
+
+### 24.9 Pros and cons at a glance
+
+| | Return entity (current) | Return DTO + response envelope |
+|---|---|---|
+| Add `page` / `limit` | Changes return type | Changes controller and service only |
+| DB schema change needed | No | No |
+| Hides internal fields | No | Yes |
+| Separate create and read shapes | No | Yes |
+| Amount of code | Least | More (DTO + mapping) |
+| Safe against entity changes | No | Yes |
+| Risk of drift | None | Mapping must be kept in sync |
+| Good for | Learning, tiny apps | Any API that will grow or be consumed by others |
+
+### 24.10 Interview Questions — DTOs with Pagination
+
+**Q120. Does adding pagination require a database change?**
+No. Pagination is `LIMIT` and `OFFSET` in SQL, which Spring Data generates from a `Pageable`. The `page` and `limit` parameters and the response envelope live in the API layer. The table is unchanged.
+
+**Q121. What is the difference between a request contract and a response contract?**
+The request contract is the input the client sends (path variables, query parameters, body). The response contract is the output (body and status). They are designed separately and often use different DTOs.
+
+**Q122. Why does the service convert 1-based `page` to 0-based?**
+Clients usually expect page 1 to be the first page, while `PageRequest.of` counts pages from 0. The conversion is `page - 1`. `page=0` must be rejected because it would produce `-1`.
+
+**Q123. What is the main drawback of returning a JPA entity directly?**
+The API becomes coupled to the table. Renaming a field or adding an internal column changes the JSON. It also leaves no place for envelope fields like `totalPages`, and it can break when relationships are serialized.
+
+**Q124. Why should POST not accept the entity as its request body?**
+The entity contains `@Id`. A client can send an id that already exists, and `save()` will then merge into that row, overwriting it. A request DTO without the id prevents this.
+
+**Q125. What does a DTO cost you?**
+More classes and mapping code, which must be kept in sync with the entity. The trade-off is decoupling from the database and control over the API shape.
+
+**Q126. How would you handle an empty page for a paginated endpoint?**
+Return `200 OK` with `content: []`, the correct `totalElements`, and `lastPage` set. Throwing an error for an empty result breaks clients that expect a consistent shape.
+
+---
+
+## 25. End-to-End Flow — Client → Server → DB and Back, with DTOs
+
+This section traces one request in each direction. There are two directions, and each has its own DTO shape:
+
+- **Inbound (write):** the client sends a **request DTO**, the server converts it to an **entity**, and the database stores the entity.
+- **Outbound (read):** the database returns **entities**, the server converts them to **response DTOs**, and the client receives JSON.
+
+The entity never crosses the HTTP boundary in either direction. The DTO never touches JPA.
+
+### 25.1 The players
+
+| Player | Class in our project (or planned) | Knows about | Does not know about |
+|---|---|---|---|
+| Client | Postman, browser, React | JSON contract | Java classes, table |
+| Controller | `CategoryController` | HTTP, DTOs, service interface | Entity internals, SQL |
+| Service | `CategoryServiceImpl` | DTOs **and** entities, mapping | HTTP status details (only via exceptions) |
+| Mapper | Logic in the service (or MapStruct) | Both DTO and entity | Transport, database |
+| Repository | `CategoryRepository` | Entity, JPQL/SQL | DTOs, JSON |
+| Database | H2 table `category` | Columns | Everything in Java |
+
+The service is the only layer that sees both sides, which is why the conversion lives there.
+
+### 25.2 Inbound flow: POST a new category
+
+**Request body from client**
+
+```json
+{ "categoryName": "Electronics" }
+```
+
+This is a `CategoryRequestDTO`. It has no `categoryId`, because the client does not choose the id.
+
+**Full path**
+
+```
+ CLIENT                    CONTROLLER                   SERVICE                         REPOSITORY              DATABASE
+ ------                    ----------                   -------                         ----------              --------
+
+ POST /api/public/categories
+ Content-Type: application/json
+ { "categoryName": "Electronics" }
+        |
+        |  HTTP request bytes
+        v
+                       1. DispatcherServlet
+                          finds CategoryController
+                          by URL + method
+                              |
+                              v
+                       2. Jackson reads JSON
+                          and builds
+                          CategoryRequestDTO
+                          (categoryName = "Electronics")
+                              |
+                              v
+                       3. @Valid runs
+                          @NotBlank, @Size(min=5)
+                          on the DTO
+                          -- fails? -> 400, stop here
+                              |
+                              v
+                       4. controller calls
+                          categoryService
+                          .createCategory(dto)  ---->  5. service maps
+                                                          DTO -> entity:
+                                                          Category c = new Category();
+                                                          c.setCategoryName(dto.categoryName());
+                                                          (categoryId stays null)
+                                                              |
+                                                              v
+                                                       6. categoryRepository
+                                                          .save(c)  ----------->  7. Hibernate sees
+                                                                                     id == null -> INSERT
+                                                                                     INSERT INTO category
+                                                                                     (category_name)
+                                                                                     VALUES ('Electronics')
+                                                                                         |
+                                                                                         v
+                                                                                     8. DB generates
+                                                                                        category_id = 7
+                                                                                        and returns row
+                                                       <----------- 9. save() returns
+                                                                      managed Category
+                                                                      (categoryId = 7)
+                              |
+                              v
+                       10. controller builds
+                           response DTO
+                           CategoryDTO(7, "Electronics")
+                           returns 201 Created
+        |
+        |  HTTP response
+        v
+ 201 Created
+ { "categoryId": 7, "categoryName": "Electronics" }
+```
+
+**Step by step**
+
+| Step | Where | What happens | Object |
+|---|---|---|---|
+| 1 | Spring MVC | Matches `POST /api/public/categories` to the controller method | — |
+| 2 | Jackson | JSON → Java object | `CategoryRequestDTO` |
+| 3 | Bean Validation | Checks rules on the DTO. Failure returns `400` before any Java business code runs | `CategoryRequestDTO` |
+| 4 | Controller | Passes the DTO to the service. The controller does not create an entity | `CategoryRequestDTO` |
+| 5 | Service | **Maps** DTO → entity. The id is still `null` | `Category` (transient) |
+| 6 | Repository | `save(entity)` | `Category` |
+| 7 | Hibernate | Sees `id == null` and issues an `INSERT` | SQL |
+| 8 | Database | Generates the primary key and stores the row | Row |
+| 9 | Repository | Returns the managed entity, now with its id | `Category` (managed) |
+| 10 | Service → Controller | Maps entity → response DTO | `CategoryDTO` |
+| 11 | Jackson | Java object → JSON, status `201` | JSON |
+
+**Why the id is missing in the request.** The database owns the id (`GenerationType.AUTO`). If the client could send `categoryId`, a POST with an existing id would make Hibernate `merge` into that row instead of inserting. The request DTO has no such field, so this cannot happen.
+
+### 25.3 Inbound flow: PUT an update
+
+The client sends the same shape, but the id comes from the URL.
+
+```
+ CLIENT
+ PUT /api/public/categories/7
+ { "categoryName": "Consumer Electronics" }
+        |
+        v
+ CONTROLLER
+   @PathVariable Long categoryId = 7        <- identity comes from URL
+   @Valid @RequestBody CategoryRequestDTO   <- new values come from body
+        |
+        v
+ SERVICE
+   Category saved = repo.findById(7)        ---->  SELECT ... WHERE category_id = 7
+                                              <----  managed Category (id=7, old name)
+   saved.setCategoryName(dto.categoryName()) <- copy only the allowed field
+   repo.save(saved)                          ---->  UPDATE category SET category_name=...
+                                                       WHERE category_id = 7
+        |
+        v
+ CONTROLLER
+   returns CategoryDTO(7, "Consumer Electronics")  -> 200 OK
+```
+
+Two rules make this safe:
+
+1. **Load first, then copy fields.** The service fetches the existing entity, so the id and any internal fields it has (audit columns, for example) are preserved.
+2. **Copy only the fields the DTO carries.** This is the step that stops a client from changing fields it should not touch.
+
+Compare with our current `PUT`, which takes `@RequestBody Category` without `@Valid`. In that version the client's whole entity is the input, so the validation rules are not applied and any future field on the entity becomes writable by the client.
+
+### 25.4 Outbound flow: GET the category list (pagination)
+
+**Full path**
+
+```
+ CLIENT                    CONTROLLER                   SERVICE                           REPOSITORY              DATABASE
+ ------                    ----------                   -------                           ----------              --------
+
+ GET /api/public/categories?page=1&limit=10
+        |
+        v
+                       1. @RequestParam page=1, limit=10
+                          (validated: >= 1, <= 100)
+                              |
+                              v
+                       2. service.getAllCategories(1, 10)  -->  3. PageRequest.of(0, 10)
+                                                                    (1-based -> 0-based)
+                                                                        |
+                                                                        v
+                                                                4. repo.findAll(pageable)  ---->  5. SELECT ... LIMIT 10 OFFSET 0
+                                                                                                  SELECT COUNT(*) FROM category
+                                                                                                      |
+                                                                                                      v
+                                                                                                  6. rows + count
+                                                                        <---------------------------  Page<Category>
+                                                                                                     (entities, managed)
+                                                                    7. map entity -> DTO:
+                                                                       List<CategoryDTO>
+                                                                       c -> new CategoryDTO(id, name)
+                                                                    8. wrap in envelope:
+                                                                       CategoryResponse(content,
+                                                                         pageNumber, pageSize,
+                                                                         totalElements, totalPages, lastPage)
+                              <---------------------------------- 9. returns CategoryResponse
+                              |
+                              v
+                       10. Jackson: object -> JSON, status 200
+        |
+        v
+ 200 OK
+ { "content": [ {"categoryId":1,"categoryName":"Electronics"}, ... ],
+   "pageNumber": 1, "pageSize": 10,
+   "totalElements": 23, "totalPages": 3, "lastPage": false }
+```
+
+**Step by step**
+
+| Step | Where | What happens | Object |
+|---|---|---|---|
+| 1 | Controller | Reads and validates query params | `Integer` page, limit |
+| 2 | Controller → Service | Passes primitives, not HTTP objects | `int`, `int` |
+| 3 | Service | Converts client page to Spring page | `Pageable` |
+| 4–5 | Repository / Hibernate | Two SQL statements: the page and the total count | SQL |
+| 6 | Database | Returns the rows and the count | Rows |
+| 7 | Service | Maps each entity to an item DTO. The entity stays inside the service | `CategoryDTO` |
+| 8 | Service | Wraps items and metadata | `CategoryResponse` |
+| 9 | Service → Controller | Returns the response DTO | `CategoryResponse` |
+| 10 | Jackson | Serializes to JSON | JSON |
+
+**What the client never sees:** `Page`, `Pageable`, `Sort`, the entity class, Hibernate proxies, or the table name. Only the envelope and the item DTOs.
+
+### 25.5 Outbound flow: a single item (GET by id)
+
+```
+ CLIENT
+ GET /api/public/categories/7
+        |
+        v
+ CONTROLLER  @PathVariable Long categoryId = 7
+        |
+        v
+ SERVICE
+   repo.findById(7)  ----> SELECT ... WHERE category_id = 7
+                     <----  Category (managed)  or  empty
+   if empty -> throw ResponseNotFoundException -> GlobalExceptionHandler -> 404
+   else     -> new CategoryDTO(c.getCategoryId(), c.getCategoryName())
+        |
+        v
+ CONTROLLER  returns CategoryDTO
+        |
+        v
+ 200 OK { "categoryId": 7, "categoryName": "Consumer Electronics" }
+```
+
+### 25.6 Where the conversions happen
+
+```
+ INBOUND (client to DB)
+
+   JSON  --Jackson-->  CategoryRequestDTO  --service maps-->  Category (entity)  --Hibernate-->  SQL INSERT/UPDATE
+   client              controller/web                         service                           database
+
+
+ OUTBOUND (DB to client)
+
+   SQL SELECT  -->  Category (entity)  --service maps-->  CategoryDTO  --wrap-->  CategoryResponse  --Jackson-->  JSON
+   database         service                             service                  controller           client
+```
+
+Rule of thumb: **DTO types appear in the controller, entity types appear in the repository, and the service is where they meet.**
+
+### 25.7 Error flow
+
+Errors take a separate path, and they also should not leak the entity.
+
+```
+ CLIENT  POST /api/public/categories  { "categoryName": "Ele" }      <- 3 chars, violates @Size(min=5)
+        |
+        v
+ CONTROLLER  @Valid fails -> MethodArgumentNotValidException
+        |
+        v
+ GlobalExceptionHandler  -> 400 Bad Request
+        { "Category name must contain least 5 characters" }
+        |
+        v
+ CLIENT  (no DB call happened, nothing stored)
+
+
+ CLIENT  DELETE /api/admin/categories/999                              <- does not exist
+        |
+        v
+ SERVICE  repo.findById(999) -> empty -> throw ResponseNotFoundException
+        |
+        v
+ GlobalExceptionHandler -> 404 Not Found   (no entity or stack trace in the body)
+```
+
+### 25.8 Our project today vs. the target flow
+
+```
+ TODAY (no DTO)
+
+   POST: JSON --Jackson--> Category (entity, with categoryId!) --save()--> DB
+   GET : DB --> Category (entity) --Jackson--> JSON (every column)
+
+ TARGET (with DTO)
+
+   POST: JSON --> CategoryRequestDTO --map--> Category --save()--> DB
+   GET : DB --> Category --map--> CategoryDTO --wrap--> CategoryResponse --> JSON
+   PUT : JSON --> CategoryRequestDTO --> load Category, copy fields --> save()
+```
+
+| Flow | Today | With DTO | Gain |
+|---|---|---|---|
+| POST input | Entity, includes `categoryId` | Request DTO, no id | Client cannot overwrite a row |
+| PUT input | Entity, no `@Valid` | Request DTO with `@Valid` | Validation applied on update |
+| GET output | Entity list | Response DTO + envelope | Pagination metadata; hidden columns |
+| Error output | Handled | Handled (unchanged) | No change needed |
+| DB schema | `category` table | `category` table | No change |
+
+### 25.9 Checklist for tracing any DTO flow
+
+1. Which DTO does the **request** body bind to? Is there an `@Valid`?
+2. Which fields does the request DTO carry? Is the id absent?
+3. Where is the **mapping** done? (It should be the service.)
+4. Does the service load the entity before updating, or build a new one?
+5. Which entity fields are copied? Are internal fields left alone?
+6. What does the **response** DTO carry? Is any entity returned directly?
+7. What status code does each path return, and does the error path avoid entities?
+
+### 25.10 Interview Questions — End-to-End DTO Flow
+
+**Q127. Which layer converts the request DTO into an entity, and why there?**
+The service. The controller is web-layer code and should not know about JPA. The repository works only with entities. The service is the only layer that sees both shapes, so it does the mapping.
+
+**Q128. What happens if the client sends `categoryId` in a POST body and the request DTO has no such field?**
+Jackson ignores the unknown property (depending on configuration), so the id is not copied into the entity. The database assigns a new id on insert.
+
+**Q129. When does `save()` perform an INSERT versus an UPDATE?**
+Hibernate checks the id. If it is `null`, it does an INSERT. If it is set, it loads and merges the row, then UPDATEs it. This is why a request DTO should not carry the id on create.
+
+**Q130. Why load the entity before updating it, rather than building a new one from the DTO?**
+Loading keeps the existing id and any fields the DTO does not carry (audit timestamps, created-by). Building a new object would overwrite those with `null`.
+
+**Q131. Which step runs first on a bad request, validation or the service?**
+Validation, on the controller side, through `@Valid`. A failure returns `400` before the service is called, so no database work happens.
+
+**Q132. Why does the client never receive the `Page` object?**
+`Page` carries Spring internals (`pageable`, `sort`). The service copies the content and metadata into a `CategoryResponse`, which is the stable API contract.
+
+**Q133. What is the difference between the request DTO and the response DTO?**
+The request DTO holds what the client is allowed to send (no id, validated). The response DTO holds what the client is allowed to read (usually includes the id and may hide fields). They can differ even for the same entity.
+
+**Q134. How does an entity relationship affect the DTO flow?**
+If `Category` later has a `List<Product>`, the response DTO maps only the fields needed (for example, product names). Returning the entity would let Jackson traverse lazy relationships and cause errors or recursion.
