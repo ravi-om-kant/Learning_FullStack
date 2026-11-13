@@ -1,3 +1,37 @@
+`"C:\Program Files\PostgreSQL\17\bin\pg_ctl.exe" start -D "C:\Program Files\PostgreSQL\17\data"
+`
+```script
+
+r
+Examine the log output.
+PS C:\RAVI_KANT_YADAV\Self_Study> New-Item -ItemType Directory -Path "C:\Program Files\PostgreSQL\17\data\pg_log" -Force
+>> 
+
+
+    Directory: C:\Program Files\PostgreSQL\17\data
+
+
+Mode                 LastWriteTime         Length Name                      
+----                 -------------         ------ ----                      
+d-----        11/12/2026   8:41 PM                pg_log                    
+
+
+PS C:\RAVI_KANT_YADAV\Self_Study> & "C:\Program Files\PostgreSQL\17\bin\pg_ctl.exe" start -D "C:\Program Files\PostgreSQL\17\data" -l "C:\Program Files\PostgreSQL\17\data\pg_log\logfile.log"
+>> 
+waiting for server to start..... done
+server started
+PS C:\RAVI_KANT_YADAV\Self_Study> Get-NetTCPConnection | Where-Object { $_.LocalPort -eq 5432 -and $_.State -eq "Listen" }
+>> 
+
+LocalAddress                        LocalPort RemoteAddress                 
+------------                        --------- -------------                 
+::1                                 5432      ::                            
+127.0.0.1                           5432      0.0.0.0                       
+
+
+PS C:\RAVI_KANT_YADAV\Self_Study> 
+```
+
 # Node.js - Complete Notes & Guide
 
 ## Table of Contents
