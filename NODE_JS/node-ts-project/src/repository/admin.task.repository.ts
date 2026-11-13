@@ -41,3 +41,14 @@ export async function findAllTasks(filters:AdminTaskListFilter):Promise<Task[]>{
     //  console.log(whereClause, result)
     return result.rows;
 }
+
+export async function updateTaskStatus(taskId: string, status: string): Promise<Task | null>{
+    const result = await pool.query<TaskRow>(`
+            UPDATE support_tasks
+            SET status = $2 
+            WHERE id = $1
+            RETURnING *
+        `, [taskId, status]);
+    
+    return result.rows[0] ?? null;
+}

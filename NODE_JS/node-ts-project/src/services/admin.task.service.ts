@@ -1,6 +1,6 @@
 import { AppError } from "../errors/AppErrors";
 import { logger } from "../libs/logger";
-import { findAllTasks } from "../repository/admin.task.repository";
+import { findAllTasks, updateTaskStatus } from "../repository/admin.task.repository";
 import { Task } from "../types/task";
 
 
@@ -33,4 +33,15 @@ export async function getAdminTask(query: AdminTaskQuery): Promise<AdminTaskList
         search, status
     })
     return { tasks };
+}
+
+export async function updateAdminTaskStatus(taskId: string, status: string): Promise<Task>{
+    if(typeof status !== 'string' || 
+        !TASK_STATUSES.includes(status as TaskStatus)
+    ){
+        throw new AppError(400,"status mush be between open, inprogress or resolved");
+    }
+    const task = await updateTaskStatus(taskId, status);
+    if(!task) throw new AppError(404, "Task not found");
+    return task;
 }
