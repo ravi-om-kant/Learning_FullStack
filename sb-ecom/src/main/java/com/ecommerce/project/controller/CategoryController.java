@@ -1,6 +1,8 @@
 package com.ecommerce.project.controller;
 
 import com.ecommerce.project.model.Category;
+import com.ecommerce.project.payload.CategoryDTO;
+import com.ecommerce.project.payload.CategoryResponse;
 import com.ecommerce.project.service.CategoryService;
 import jakarta.validation.Valid;
 import org.slf4j.Logger;
@@ -31,8 +33,10 @@ public class CategoryController {
     }
 
     @GetMapping("/public/categories")
-    public ResponseEntity<List<Category>> getAllCategoryList() {
-        List<Category> categoryList = categoryService.getAllCategoryList();
+    public ResponseEntity<CategoryResponse> getAllCategoryList() {
+        CategoryResponse categoryList = categoryService.getAllCategoryList();
+//        public ResponseEntity<List<Category>> getAllCategoryList() {
+//        List<Category> categoryList = categoryService.getAllCategoryList();
 //        if(categoryList.isEmpty()){
 //            return new ResponseEntity<>(HttpStatus.NO_CONTENT);
 //        }
@@ -41,12 +45,14 @@ public class CategoryController {
 
     //    @PostMapping("/public/categories")
     @RequestMapping(value = "/public/categories", method = RequestMethod.POST)
-    public ResponseEntity<String> createCategory(@Valid @RequestBody Category category) {
-        categoryService.createCategory(category);
-        List<Category> categoryList = categoryService.getAllCategoryList();
+    public ResponseEntity<CategoryDTO> createCategory(@Valid @RequestBody CategoryDTO category) {
+//        public ResponseEntity<String> createCategory(@Valid @RequestBody Category category) {
+        CategoryDTO savedCategoryDTO = categoryService.createCategory(category);
+//        CategoryResponse categoryList = categoryService.getAllCategoryList();
+        return new ResponseEntity<>(savedCategoryDTO, HttpStatus.CREATED);
 //        return "Category created successfully: " + categoryService.getAllCategoryList().get(categoryList.size()-1)
 //                + " | All categories: " + categoryList+"RequestBody: "+category.toString();
-        return new ResponseEntity<>("Category created successfully: " + categoryList, HttpStatus.CREATED);
+//        return new ResponseEntity<>("Category created successfully: " + categoryList, HttpStatus.CREATED);
     }
 
     @DeleteMapping("/admin/categories/{categoryId}")
@@ -60,9 +66,10 @@ public class CategoryController {
     }
 
     @PutMapping("/public/categories/{categoryId}")
-    public ResponseEntity<? extends Object> updateCategory(@RequestBody Category category, @PathVariable Long categoryId) {
-        Category updatedCategory = categoryService.updateCategory(category, categoryId);
-        return ResponseEntity.status(HttpStatus.ACCEPTED).body("Category updated successfully" + categoryId);
+    public ResponseEntity<? extends Object> updateCategory(@RequestBody CategoryDTO category, @PathVariable Long categoryId) {
+        CategoryDTO updatedCategory = categoryService.updateCategory(category, categoryId);
+//        return ResponseEntity.status(HttpStatus.ACCEPTED).body("Category updated successfully" + categoryId);
+        return ResponseEntity.status(HttpStatus.CREATED).body(updatedCategory);
 //        try{
 //        }catch(ResponseStatusException e){
 //            return ResponseEntity.status(e.getStatusCode()).body(e.getReason());
