@@ -8,6 +8,9 @@ import com.ecommerce.project.payload.CategoryResponse;
 import com.ecommerce.project.repositories.CategoryRepository;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.ui.ModelMap;
@@ -29,14 +32,20 @@ public class CategoryServiceImpl implements CategoryService {
     private ModelMapper modelMapper;
 
     @Override
-    public CategoryResponse getAllCategoryList() {
+    public CategoryResponse getAllCategoryList(Integer pageNumber, Integer pageSize) {
 
 
 //        public List<Category> getAllCategoryList() {
 //        return List.of();
 //        ResponseStatusException categoryListCreated = new ResponseStatusException(HttpStatus.CREATED, categoryList.toString());
 //        return categoryList;
-        List<Category> categoryList = categoryRepository.findAll();
+
+        /* IMPLEMENT PAGINATION USING 'Pageable'*/
+        Pageable pageDetails = PageRequest.of(pageNumber, pageSize);
+        Page<Category> categoryPage = categoryRepository.findAll(pageDetails);
+
+        List<Category> categoryList = categoryPage.getContent();
+
         if(categoryList.isEmpty()){
             throw new APIException("Category List is Empty", HttpStatus.NO_CONTENT);
         }
@@ -46,6 +55,11 @@ public class CategoryServiceImpl implements CategoryService {
 
         CategoryResponse categoryResponse = new CategoryResponse();
         categoryResponse.setContent(categoryDTOS);
+        categoryResponse.setTotalPages(categoryPage.getTotalPages());
+        categoryResponse.setHasNext(categoryPage.hasNext());
+        categoryResponse.setPageNumber(categoryPage.getNumber());
+        categoryResponse.setPageSize(categoryPage.getSize());
+
 //        return categoryList;
         return categoryResponse;
     }
@@ -108,6 +122,16 @@ public class CategoryServiceImpl implements CategoryService {
                 .orElseThrow(() ->
                         new ResponseNotFoundException("Category", "categoryId", categoryId));
 
+        /*
+        One minor issue — updateCategory
+
+        // CategoryServiceImpl.java:111
+        Category category = modelMapper.map(categoryDTO, Category.class);
+        savedCategory.setCategoryName(category.getCategoryName());
+        You're mapping categoryDTO → category just to call .getCategoryName(). Simpler:
+        savedCategory.setCategoryName(categoryDTO.getCategoryName());
+        Small but avoids creating a throwaway object.
+        * */
         Category category = modelMapper.map(categoryDTO, Category.class);
         savedCategory.setCategoryName(category.getCategoryName());
         savedCategory = categoryRepository.save(savedCategory);

@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 
@@ -25,16 +26,23 @@ public class CategoryController {
 
     private static final Logger log = LoggerFactory.getLogger(CategoryController.class);
     // @Autowired // Field Injection
-    private CategoryService categoryService;
+    private final CategoryService categoryService;
 
     // Constructor injection
     public CategoryController(CategoryService categoryService) {
         this.categoryService = categoryService;
     }
 
+    @GetMapping("/echo")
+    public ResponseEntity<String> echoMessage(@RequestParam(name = "message", required = false) String message ){
+        return new ResponseEntity<>("Echoed message: " + message, HttpStatus.OK);
+    }
+
     @GetMapping("/public/categories")
-    public ResponseEntity<CategoryResponse> getAllCategoryList() {
-        CategoryResponse categoryList = categoryService.getAllCategoryList();
+    public ResponseEntity<CategoryResponse> getAllCategoryList(
+            @RequestParam(name = "pageNumber", defaultValue = "0") Integer pageNumber,
+            @RequestParam(name = "pageSize", defaultValue = "10") Integer pageSize) {
+        CategoryResponse categoryList = categoryService.getAllCategoryList(pageNumber, pageSize);
 //        public ResponseEntity<List<Category>> getAllCategoryList() {
 //        List<Category> categoryList = categoryService.getAllCategoryList();
 //        if(categoryList.isEmpty()){
