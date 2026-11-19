@@ -1,0 +1,947 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>E-Commerce Architecture</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+:root {
+  --bg: #F8FAFC; --bg-surface: #FFFFFF; --bg-card: #F1F5F9; --bg-code: #E8EDF5;
+  --border: #CBD5E1; --text: #0F172A; --text-muted: #64748B; --text-head: #1E293B;
+  --accent: #2563EB; --accent-s: #DBEAFE; --accent2: #7C3AED; --accent2-s: #EDE9FE;
+  --ok: #059669; --ok-s: #D1FAE5; --warn: #D97706; --warn-s: #FEF3C7;
+  --danger: #DC2626; --danger-s: #FEE2E2; --kafka: #DB2777; --kafka-s: #FCE7F0;
+  --redis: #DC2626; --redis-s: #FEE2E2; --db: #0891B2; --db-s: #CFFAFE;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg:#060B18;--bg-surface:#0D1526;--bg-card:#111D35;--bg-code:#0A1222;
+    --border:#1E2D4A;--text:#E2E8F0;--text-muted:#64748B;--text-head:#F1F5F9;
+    --accent:#3B82F6;--accent-s:#1E3A5F;--accent2:#A78BFA;--accent2-s:#2D1B69;
+    --ok:#10B981;--ok-s:#064E3B;--warn:#F59E0B;--warn-s:#451A03;
+    --danger:#EF4444;--danger-s:#450A0A;--kafka:#F472B6;--kafka-s:#500724;
+    --redis:#F87171;--redis-s:#450A0A;--db:#22D3EE;--db-s:#083344;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg:#060B18;--bg-surface:#0D1526;--bg-card:#111D35;--bg-code:#0A1222;
+  --border:#1E2D4A;--text:#E2E8F0;--text-muted:#64748B;--text-head:#F1F5F9;
+  --accent:#3B82F6;--accent-s:#1E3A5F;--accent2:#A78BFA;--accent2-s:#2D1B69;
+  --ok:#10B981;--ok-s:#064E3B;--warn:#F59E0B;--warn-s:#451A03;
+  --danger:#EF4444;--danger-s:#450A0A;--kafka:#F472B6;--kafka-s:#500724;
+  --redis:#F87171;--redis-s:#450A0A;--db:#22D3EE;--db-s:#083344;
+  color-scheme:dark;
+}
+*{box-sizing:border-box;}
+body{margin:0;font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text);display:flex;flex-direction:column;min-height:100%;}
+.hdr{background:var(--bg-surface);border-bottom:1px solid var(--border);padding:.6rem max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));position:sticky;top:env(safe-area-inset-top,0px);z-index:100;}
+.hdr-inner{display:flex;align-items:center;gap:.75rem;max-width:1400px;margin:0 auto;}
+.logo{font-family:'Space Grotesk',sans-serif;font-size:1rem;font-weight:700;color:var(--accent);flex-shrink:0;}
+.logo span{color:var(--text);font-weight:500;}
+.tabs{display:flex;overflow-x:auto;scrollbar-width:none;flex:1;}
+.tabs::-webkit-scrollbar{display:none;}
+.tab{padding:.35rem .8rem;font-size:.78rem;font-weight:500;color:var(--text-muted);border:none;background:none;cursor:pointer;border-radius:5px;white-space:nowrap;font-family:'Inter',sans-serif;transition:all .12s;}
+.tab:hover{color:var(--text);background:var(--bg-card);}
+.tab.on{color:var(--accent);background:var(--accent-s);font-weight:600;}
+.btn-theme{margin-left:auto;flex-shrink:0;padding:.3rem .65rem;font-size:.72rem;border:1px solid var(--border);background:var(--bg-card);color:var(--text-muted);border-radius:5px;cursor:pointer;font-family:'Inter',sans-serif;}
+main{flex:1;padding:1.25rem max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:1.25rem;max-width:1400px;margin:0 auto;width:100%;}
+.panel{display:none;}.panel.on{display:block;}
+.ph{font-family:'Space Grotesk',sans-serif;font-size:1.25rem;font-weight:700;color:var(--text-head);margin:0 0 .2rem;text-wrap:balance;}
+.pd{color:var(--text-muted);font-size:.82rem;margin:0 0 1.25rem;}
+.dlabel{font-family:'JetBrains Mono',monospace;font-size:.62rem;font-weight:500;letter-spacing:.08em;text-transform:uppercase;color:var(--text-muted);margin-bottom:.65rem;display:flex;align-items:center;gap:.5rem;}
+.dlabel::after{content:'';flex:1;height:1px;background:var(--border);}
+.dsec{margin-bottom:1.75rem;}
+.tgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:.85rem;}
+.tc{background:var(--bg-surface);border:1px solid var(--border);border-radius:9px;overflow:hidden;}
+.tc-hdr{padding:.55rem .85rem;display:flex;align-items:center;gap:.5rem;border-bottom:1px solid var(--border);}
+.tn{font-family:'JetBrains Mono',monospace;font-size:.78rem;font-weight:500;color:var(--text-head);}
+.tbadge{font-size:.58rem;font-weight:600;letter-spacing:.04em;padding:.12rem .38rem;border-radius:3px;margin-left:auto;}
+.be{background:var(--accent-s);color:var(--accent);}.bj{background:var(--accent2-s);color:var(--accent2);}
+.tfields{padding:.4rem 0;}
+.fr{display:flex;align-items:center;gap:.45rem;padding:.18rem .85rem;font-size:.72rem;min-width:0;}
+.fr:hover{background:var(--bg-card);}
+.fi{width:14px;flex-shrink:0;text-align:center;font-size:.7rem;}
+.fpk{color:var(--warn);}.ffk{color:var(--accent2);}.fmuted{color:var(--text-muted);}
+.fn{font-family:'JetBrains Mono',monospace;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.fn.pk{color:var(--warn);}.fn.fk{color:var(--accent2);}
+.ft{font-family:'JetBrains Mono',monospace;color:var(--text-muted);font-size:.62rem;flex-shrink:0;}
+.rtags{display:flex;flex-wrap:wrap;gap:.35rem;padding:.45rem .85rem;border-top:1px solid var(--border);}
+.rt{font-size:.6rem;padding:.12rem .4rem;border-radius:8px;background:var(--bg-card);color:var(--text-muted);font-family:'JetBrains Mono',monospace;white-space:nowrap;}
+.arch-wrap{background:var(--bg-surface);border:1px solid var(--border);border-radius:9px;padding:1.25rem;overflow-x:auto;}
+.arch-svg{width:100%;min-width:720px;display:block;}
+.flow-grid{display:grid;grid-template-columns:1fr 1fr;gap:1.25rem;}
+@media(max-width:680px){.flow-grid{grid-template-columns:1fr;}.tgrid{grid-template-columns:1fr;}}
+.fc{background:var(--bg-surface);border:1px solid var(--border);border-radius:9px;overflow:hidden;}
+.fc-title{font-family:'Space Grotesk',sans-serif;font-size:.82rem;font-weight:600;padding:.65rem .9rem;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:.45rem;}
+.fc-body{padding:.9rem;}
+.steps{display:flex;flex-direction:column;gap:.45rem;}
+.step{display:flex;gap:.65rem;align-items:flex-start;}
+.snum{width:18px;height:18px;border-radius:50%;background:var(--accent-s);color:var(--accent);font-size:.6rem;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px;font-family:'JetBrains Mono',monospace;}
+.scontent{font-size:.75rem;line-height:1.5;min-width:0;}
+.stitle{font-weight:600;color:var(--text-head);}
+.sdetail{color:var(--text-muted);font-size:.7rem;margin-top:.08rem;}
+.topics-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:.85rem;}
+.tkcard{background:var(--bg-surface);border:1px solid var(--border);border-radius:9px;overflow:hidden;}
+.tk-hdr{padding:.55rem .85rem;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
+.tkname{font-family:'JetBrains Mono',monospace;font-size:.78rem;font-weight:500;color:var(--kafka);}
+.tkpart{font-size:.62rem;color:var(--text-muted);font-family:'JetBrains Mono',monospace;}
+.evlist{padding:.4rem 0;}
+.ev{display:flex;align-items:center;gap:.65rem;padding:.22rem .85rem;font-size:.72rem;}
+.ev:hover{background:var(--bg-card);}
+.edot{width:6px;height:6px;border-radius:50%;flex-shrink:0;}
+.ename{font-family:'JetBrains Mono',monospace;flex:1;color:var(--text);min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.eprod{font-size:.62rem;color:var(--text-muted);white-space:nowrap;}
+.redis-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:.85rem;}
+.rcard{background:var(--bg-surface);border:1px solid var(--border);border-radius:9px;padding:.9rem;}
+.rtitle{font-family:'Space Grotesk',sans-serif;font-size:.82rem;font-weight:600;color:var(--redis);margin-bottom:.6rem;display:flex;align-items:center;gap:.4rem;}
+.rpat{font-family:'JetBrains Mono',monospace;font-size:.68rem;background:var(--bg-code);color:var(--text-muted);padding:.6rem .7rem;border-radius:5px;margin-bottom:.6rem;line-height:1.6;}
+.rttl{font-size:.68rem;color:var(--text-muted);display:flex;gap:.5rem;flex-wrap:wrap;}
+.rttl span{background:var(--redis-s);color:var(--redis);padding:.1rem .38rem;border-radius:3px;font-family:'JetBrains Mono',monospace;font-size:.62rem;}
+.api-sec{margin-bottom:1.5rem;}
+.api-tbl{width:100%;border-collapse:collapse;font-size:.76rem;display:block;overflow-x:auto;}
+.api-tbl th{text-align:left;padding:.45rem .7rem;font-weight:600;font-size:.62rem;letter-spacing:.05em;text-transform:uppercase;color:var(--text-muted);background:var(--bg-card);border-bottom:1px solid var(--border);}
+.api-tbl td{padding:.38rem .7rem;border-bottom:1px solid var(--border);vertical-align:top;}
+.api-tbl tr:last-child td{border-bottom:none;}
+.api-tbl table{display:table;width:100%;}
+.mth{font-family:'JetBrains Mono',monospace;font-size:.62rem;font-weight:700;padding:.12rem .38rem;border-radius:3px;display:inline-block;}
+.mget{background:var(--ok-s);color:var(--ok);}.mpost{background:var(--accent-s);color:var(--accent);}
+.mput{background:var(--warn-s);color:var(--warn);}.mdel{background:var(--danger-s);color:var(--danger);}
+.apath{font-family:'JetBrains Mono',monospace;font-size:.7rem;color:var(--text);}
+.abadge{font-size:.58rem;padding:.1rem .32rem;border-radius:3px;font-weight:500;}
+.apub{background:var(--ok-s);color:var(--ok);}.ausr{background:var(--accent-s);color:var(--accent);}.aadm{background:var(--danger-s);color:var(--danger);}
+.chip-row{display:flex;flex-wrap:wrap;gap:.4rem;margin-bottom:.85rem;}
+.chip{font-size:.7rem;padding:.22rem .6rem;border-radius:16px;border:1px solid var(--border);background:var(--bg-surface);color:var(--text-muted);font-family:'JetBrains Mono',monospace;}
+pre{margin:0;line-height:1.6;overflow-x:auto;}
+</style>
+
+<header class="hdr">
+  <div class="hdr-inner">
+    <div class="logo">sb<span>-ecom</span></div>
+    <nav class="tabs">
+      <button class="tab on" onclick="sw('schema',this)">DB Schema</button>
+      <button class="tab" onclick="sw('arch',this)">Architecture</button>
+      <button class="tab" onclick="sw('auth',this)">Auth Flow</button>
+      <button class="tab" onclick="sw('kafka',this)">Kafka</button>
+      <button class="tab" onclick="sw('redis',this)">Redis</button>
+      <button class="tab" onclick="sw('api',this)">API Ref</button>
+    </nav>
+    <button class="btn-theme" onclick="toggleTheme()">◐ Theme</button>
+  </div>
+</header>
+
+<main>
+
+<!-- ═══════════════════ DB SCHEMA ═══════════════════ -->
+<div class="panel on" id="tab-schema">
+  <h1 class="ph">Database Schema</h1>
+  <p class="pd">PostgreSQL entity model — 15 tables across 3 domains</p>
+
+  <div class="dsec">
+    <div class="dlabel" style="color:var(--accent)">Users &amp; Auth</div>
+    <div class="tgrid">
+
+      <div class="tc">
+        <div class="tc-hdr" style="border-left:3px solid var(--accent)">
+          <div class="tn">users</div><div class="tbadge be">entity</div>
+        </div>
+        <div class="tfields">
+          <div class="fr"><div class="fi fpk">🔑</div><div class="fn pk">user_id</div><div class="ft">BIGSERIAL PK</div></div>
+          <div class="fr"><div class="fi fmuted">◈</div><div class="fn">username</div><div class="ft">VARCHAR(50) UQ</div></div>
+          <div class="fr"><div class="fi fmuted">◈</div><div class="fn">email</div><div class="ft">VARCHAR(100) UQ</div></div>
+          <div class="fr"><div class="fi fmuted">·</div><div class="fn">password_hash</div><div class="ft">VARCHAR(255)</div></div>
+          <div class="fr"><div class="fi fmuted">·</div><div class="fn">first_name</div><div class="ft">VARCHAR(50)</div></div>
+          <div class="fr"><div class="fi fmuted">·</div><div class="fn">last_name</div><div class="ft">VARCHAR(50)</div></div>
+          <div class="fr"><div class="fi fmuted">·</div><div class="fn">phone</div><div class="ft">VARCHAR(20)</div></div>
+          <div class="fr"><div class="fi fmuted">·</div><div class="fn">is_active</div><div class="ft">BOOLEAN</div></div>
+          <div class="fr"><div class="fi fmuted">·</div><div class="fn">email_verified</div><div class="ft">BOOLEAN</div></div>
+          <div class="fr"><div class="fi fmuted">·</div><div class="fn">created_at / updated_at</div><div class="ft">TIMESTAMP</div></div>
+        </div>
+      </div>
+
+      <div class="tc">
+        <div class="tc-hdr" style="border-left:3px solid var(--accent)">
+          <div class="tn">roles</div><div class="tbadge be">entity</div>
+        </div>
+        <div class="tfields">
+          <div class="fr"><div class="fi fpk">🔑</div><div class="fn pk">role_id</div><div class="ft">BIGSERIAL PK</div></div>
+          <div class="fr"><div class="fi fmuted">◈</div><div class="fn">role_name</div><div class="ft">VARCHAR(30) UQ</div></div>
+        </div>
+        <div class="rtags"><span class="rt">ROLE_USER</span><span class="rt">ROLE_SELLER</span><span class="rt">ROLE_ADMIN</span></div>
+      </div>
+
+      <div class="tc">
+        <div class="tc-hdr" style="border-left:3px solid var(--accent2)">
+          <div class="tn">user_roles</div><div class="tbadge bj">junction</div>
+        </div>
+        <div class="tfields">
+          <div class="fr"><div class="fi ffk">⟶</div><div class="fn fk">user_id</div><div class="ft">FK → users</div></div>
+          <div class="fr"><div class="fi ffk">⟶</div><div class="fn fk">role_id</div><div class="ft">FK → roles</div></div>
+        </div>
+        <div class="rtags"><span class="rt">PK(user_id, role_id)</span></div>
+      </div>
+
+      <div class="tc">
+        <div class="tc-hdr" style="border-left:3px solid var(--accent)">
+          <div class="tn">addresses</div><div class="tbadge be">entity</div>
+        </div>
+        <div class="tfields">
+          <div class="fr"><div class="fi fpk">🔑</div><div class="fn pk">address_id</div><div class="ft">BIGSERIAL PK</div></div>
+          <div class="fr"><div class="fi ffk">⟶</div><div class="fn fk">user_id</div><div class="ft">FK → users</div></div>
+          <div class="fr"><div class="fi fmuted">·</div><div class="fn">name</div><div class="ft">VARCHAR(100)</div></div>
+          <div class="fr"><div class="fi fmuted">·</div><div class="fn">street_line1</div><div class="ft">VARCHAR(200)</div></div>
+          <div class="fr"><div class="fi fmuted">·</div><div class="fn">city / state</div><div class="ft">VARCHAR(50)</div></div>
+          <div class="fr"><div class="fi fmuted">·</div><div class="fn">zip_code</div><div class="ft">VARCHAR(20)</div></div>
+          <div class="fr"><div class="fi fmuted">·</div><div class="fn">country</div><div class="ft">VARCHAR(50)</div></div>
+          <div class="fr"><div class="fi fmuted">·</div><div class="fn">is_default</div><div class="ft">BOOLEAN</div></div>
+        </div>
+      </div>
+
+      <div class="tc">
+        <div class="tc-hdr" style="border-left:3px solid var(--accent2)">
+          <div class="tn">refresh_tokens</div><div class="tbadge be">entity</div>
+        </div>
+        <div class="tfields">
+          <div class="fr"><div class="fi fpk">🔑</div><div class="fn pk">token_id</div><div class="ft">BIGSERIAL PK</div></div>
+          <div class="fr"><div class="fi ffk">⟶</div><div class="fn fk">user_id</div><div class="ft">FK → users</div></div>
+          <div class="fr"><div class="fi fmuted">◈</div><div class="fn">token</div><div class="ft">TEXT UQ</div></div>
+          <div class="fr"><div class="fi fmuted">·</div><div class="fn">expiry_date</div><div class="ft">TIMESTAMP</div></div>
+          <div class="fr"><div class="fi fmuted">·</div><div class="fn">is_revoked</div><div class="ft">BOOLEAN</div></div>
+          <div class="fr"><div class="fi fmuted">·</div><div class="fn">device_info</div><div class="ft">VARCHAR(255)</div></div>
+          <div class="fr"><div class="fi fmuted">·</div><div class="fn">ip_address</div><div class="ft">VARCHAR(45)</div></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="dsec">
+    <div class="dlabel" style="color:var(--ok)">Product Catalog</div>
+    <div class="tgrid">
+
+      <div class="tc">
+        <div class="tc-hdr" style="border-left:3px solid var(--ok)">
+          <div class="tn">categories</div><div class="tbadge be">entity</div>
+        </div>
+        <div class="tfields">
+          <div class="fr"><div class="fi fpk">🔑</div><div class="fn pk">category_id</div><div class="ft">BIGSERIAL PK</div></div>
+          <div class="fr"><div class="fi fmuted">·</div><div class="fn">category_name</div><div class="ft">VARCHAR(100)</div></div>
+          <div class="fr"><div class="fi ffk">⟶</div><div class="fn fk">parent_category_id</div><div class="ft">FK → categories</div></div>
+          <div class="fr"><div class="fi fmuted">◈</div><div class="fn">slug</div><div class="ft">VARCHAR(120) UQ</div></div>
+          <div class="fr"><div class="fi fmuted">·</div><div class="fn">description</div><div class="ft">TEXT</div></div>
+          <div class="fr"><div class="fi fmuted">·</div><div class="fn">image_url</div><div class="ft">TEXT</div></div>
+          <div class="fr"><div class="fi fmuted">·</div><div class="fn">is_active</div><div class="ft">BOOLEAN</div></div>
+        </div>
+        <div class="rtags"><span class="rt">self-ref hierarchy</span></div>
+      </div>
+
+      <div class="tc">
+        <div class="tc-hdr" style="border-left:3px solid var(--ok)">
+          <div class="tn">products</div><div class="tbadge be">entity</div>
+        </div>
+        <div class="tfields">
+          <div class="fr"><div class="fi fpk">🔑</div><div class="fn pk">product_id</div><div class="ft">BIGSERIAL PK</div></div>
+          <div class="fr"><div class="fi fmuted">·</div><div class="fn">product_name</div><div class="ft">VARCHAR(200)</div></div>
+          <div class="fr"><div class="fi fmuted">◈</div><div class="fn">slug</div><div class="ft">VARCHAR(220) UQ</div></div>
+          <div class="fr"><div class="fi fmuted">·</div><div class="fn">description</div><div class="ft">TEXT</div></div>
+          <div class="fr"><div class="fi fmuted">·</div><div class="fn">price / special_price</div><div class="ft">DECIMAL(10,2)</div></div>
+          <div class="fr"><div class="fi fmuted">·</div><div class="fn">quantity</div><div class="ft">INTEGER</div></div>
+          <div class="fr"><div class="fi fmuted">·</div><div class="fn">image</div><div class="ft">TEXT</div></div>
+          <div class="fr"><div class="fi ffk">⟶</div><div class="fn fk">category_id</div><div class="ft">FK → categories</div></div>
+          <div class="fr"><div class="fi ffk">⟶</div><div class="fn fk">seller_id</div><div class="ft">FK → users</div></div>
+          <div class="fr"><div class="fi fmuted">·</div><div class="fn">is_active</div><div class="ft">BOOLEAN</div></div>
+          <div class="fr"><div class="fi fmuted">·</div><div class="fn">created_at / updated_at</div><div class="ft">TIMESTAMP</div></div>
+        </div>
+      </div>
+
+      <div class="tc">
+        <div class="tc-hdr" style="border-left:3px solid var(--ok)">
+          <div class="tn">product_images</div><div class="tbadge be">entity</div>
+        </div>
+        <div class="tfields">
+          <div class="fr"><div class="fi fpk">🔑</div><div class="fn pk">image_id</div><div class="ft">BIGSERIAL PK</div></div>
+          <div class="fr"><div class="fi ffk">⟶</div><div class="fn fk">product_id</div><div class="ft">FK → products</div></div>
+          <div class="fr"><div class="fi fmuted">·</div><div class="fn">image_url</div><div class="ft">TEXT</div></div>
+          <div class="fr"><div class="fi fmuted">·</div><div class="fn">is_primary</div><div class="ft">BOOLEAN</div></div>
+          <div class="fr"><div class="fi fmuted">·</div><div class="fn">sort_order</div><div class="ft">INTEGER</div></div>
+        </div>
+      </div>
+
+      <div class="tc">
+        <div class="tc-hdr" style="border-left:3px solid var(--ok)">
+          <div class="tn">reviews</div><div class="tbadge be">entity</div>
+        </div>
+        <div class="tfields">
+          <div class="fr"><div class="fi fpk">🔑</div><div class="fn pk">review_id</div><div class="ft">BIGSERIAL PK</div></div>
+          <div class="fr"><div class="fi ffk">⟶</div><div class="fn fk">user_id</div><div class="ft">FK → users</div></div>
+          <div class="fr"><div class="fi ffk">⟶</div><div class="fn fk">product_id</div><div class="ft">FK → products</div></div>
+          <div class="fr"><div class="fi ffk">⟶</div><div class="fn fk">order_item_id</div><div class="ft">FK → order_items</div></div>
+          <div class="fr"><div class="fi fmuted">·</div><div class="fn">rating</div><div class="ft">SMALLINT 1–5</div></div>
+          <div class="fr"><div class="fi fmuted">·</div><div class="fn">comment</div><div class="ft">TEXT</div></div>
+          <div class="fr"><div class="fi fmuted">·</div><div class="fn">is_verified</div><div class="ft">BOOLEAN</div></div>
+          <div class="fr"><div class="fi fmuted">·</div><div class="fn">created_at</div><div class="ft">TIMESTAMP</div></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="dsec">
+    <div class="dlabel" style="color:var(--warn)">Cart &amp; Orders</div>
+    <div class="tgrid">
+
+      <div class="tc">
+        <div class="tc-hdr" style="border-left:3px solid var(--warn)">
+          <div class="tn">carts</div><div class="tbadge be">entity</div>
+        </div>
+        <div class="tfields">
+          <div class="fr"><div class="fi fpk">🔑</div><div class="fn pk">cart_id</div><div class="ft">BIGSERIAL PK</div></div>
+          <div class="fr"><div class="fi ffk">⟶</div><div class="fn fk">user_id</div><div class="ft">FK → users UQ</div></div>
+          <div class="fr"><div class="fi fmuted">·</div><div class="fn">total_price</div><div class="ft">DECIMAL(10,2)</div></div>
+          <div class="fr"><div class="fi fmuted">·</div><div class="fn">created_at / updated_at</div><div class="ft">TIMESTAMP</div></div>
+        </div>
+      </div>
+
+      <div class="tc">
+        <div class="tc-hdr" style="border-left:3px solid var(--warn)">
+          <div class="tn">cart_items</div><div class="tbadge be">entity</div>
+        </div>
+        <div class="tfields">
+          <div class="fr"><div class="fi fpk">🔑</div><div class="fn pk">cart_item_id</div><div class="ft">BIGSERIAL PK</div></div>
+          <div class="fr"><div class="fi ffk">⟶</div><div class="fn fk">cart_id</div><div class="ft">FK → carts</div></div>
+          <div class="fr"><div class="fi ffk">⟶</div><div class="fn fk">product_id</div><div class="ft">FK → products</div></div>
+          <div class="fr"><div class="fi fmuted">·</div><div class="fn">quantity</div><div class="ft">INTEGER</div></div>
+          <div class="fr"><div class="fi fmuted">·</div><div class="fn">discount</div><div class="ft">DECIMAL(10,2)</div></div>
+          <div class="fr"><div class="fi fmuted">·</div><div class="fn">product_price</div><div class="ft">DECIMAL(10,2)</div></div>
+        </div>
+        <div class="rtags"><span class="rt">UQ(cart_id, product_id)</span></div>
+      </div>
+
+      <div class="tc">
+        <div class="tc-hdr" style="border-left:3px solid var(--danger)">
+          <div class="tn">orders</div><div class="tbadge be">entity</div>
+        </div>
+        <div class="tfields">
+          <div class="fr"><div class="fi fpk">🔑</div><div class="fn pk">order_id</div><div class="ft">BIGSERIAL PK</div></div>
+          <div class="fr"><div class="fi ffk">⟶</div><div class="fn fk">user_id</div><div class="ft">FK → users</div></div>
+          <div class="fr"><div class="fi ffk">⟶</div><div class="fn fk">address_id</div><div class="ft">FK → addresses</div></div>
+          <div class="fr"><div class="fi ffk">⟶</div><div class="fn fk">coupon_id</div><div class="ft">FK → coupons</div></div>
+          <div class="fr"><div class="fi fmuted">·</div><div class="fn">total_amount</div><div class="ft">DECIMAL(10,2)</div></div>
+          <div class="fr"><div class="fi fmuted">·</div><div class="fn">discount_amount</div><div class="ft">DECIMAL(10,2)</div></div>
+          <div class="fr"><div class="fi fmuted">·</div><div class="fn">tax_amount</div><div class="ft">DECIMAL(10,2)</div></div>
+          <div class="fr"><div class="fi fmuted">·</div><div class="fn">final_amount</div><div class="ft">DECIMAL(10,2)</div></div>
+          <div class="fr"><div class="fi fmuted">·</div><div class="fn">order_status</div><div class="ft">VARCHAR(30)</div></div>
+          <div class="fr"><div class="fi fmuted">·</div><div class="fn">created_at / updated_at</div><div class="ft">TIMESTAMP</div></div>
+        </div>
+        <div class="rtags"><span class="rt">PENDING</span><span class="rt">CONFIRMED</span><span class="rt">SHIPPED</span><span class="rt">DELIVERED</span><span class="rt">CANCELLED</span></div>
+      </div>
+
+      <div class="tc">
+        <div class="tc-hdr" style="border-left:3px solid var(--danger)">
+          <div class="tn">order_items</div><div class="tbadge be">entity</div>
+        </div>
+        <div class="tfields">
+          <div class="fr"><div class="fi fpk">🔑</div><div class="fn pk">order_item_id</div><div class="ft">BIGSERIAL PK</div></div>
+          <div class="fr"><div class="fi ffk">⟶</div><div class="fn fk">order_id</div><div class="ft">FK → orders</div></div>
+          <div class="fr"><div class="fi ffk">⟶</div><div class="fn fk">product_id</div><div class="ft">FK → products</div></div>
+          <div class="fr"><div class="fi fmuted">·</div><div class="fn">quantity</div><div class="ft">INTEGER</div></div>
+          <div class="fr"><div class="fi fmuted">·</div><div class="fn">ordered_product_price</div><div class="ft">DECIMAL(10,2)</div></div>
+          <div class="fr"><div class="fi fmuted">·</div><div class="fn">discount</div><div class="ft">DECIMAL(10,2)</div></div>
+        </div>
+      </div>
+
+      <div class="tc">
+        <div class="tc-hdr" style="border-left:3px solid var(--danger)">
+          <div class="tn">payments</div><div class="tbadge be">entity</div>
+        </div>
+        <div class="tfields">
+          <div class="fr"><div class="fi fpk">🔑</div><div class="fn pk">payment_id</div><div class="ft">BIGSERIAL PK</div></div>
+          <div class="fr"><div class="fi ffk">⟶</div><div class="fn fk">order_id</div><div class="ft">FK → orders UQ</div></div>
+          <div class="fr"><div class="fi fmuted">·</div><div class="fn">payment_method</div><div class="ft">VARCHAR(50)</div></div>
+          <div class="fr"><div class="fi fmuted">·</div><div class="fn">payment_gateway_id</div><div class="ft">VARCHAR(100)</div></div>
+          <div class="fr"><div class="fi fmuted">·</div><div class="fn">payment_status</div><div class="ft">VARCHAR(30)</div></div>
+          <div class="fr"><div class="fi fmuted">·</div><div class="fn">amount / currency</div><div class="ft">DECIMAL / CHAR(3)</div></div>
+          <div class="fr"><div class="fi fmuted">·</div><div class="fn">created_at</div><div class="ft">TIMESTAMP</div></div>
+        </div>
+        <div class="rtags"><span class="rt">RAZORPAY</span><span class="rt">STRIPE</span><span class="rt">COD</span><span class="rt">UPI</span></div>
+      </div>
+
+      <div class="tc">
+        <div class="tc-hdr" style="border-left:3px solid var(--accent2)">
+          <div class="tn">coupons</div><div class="tbadge be">entity</div>
+        </div>
+        <div class="tfields">
+          <div class="fr"><div class="fi fpk">🔑</div><div class="fn pk">coupon_id</div><div class="ft">BIGSERIAL PK</div></div>
+          <div class="fr"><div class="fi fmuted">◈</div><div class="fn">coupon_code</div><div class="ft">VARCHAR(30) UQ</div></div>
+          <div class="fr"><div class="fi fmuted">·</div><div class="fn">discount_type</div><div class="ft">VARCHAR(20)</div></div>
+          <div class="fr"><div class="fi fmuted">·</div><div class="fn">discount_value</div><div class="ft">DECIMAL(10,2)</div></div>
+          <div class="fr"><div class="fi fmuted">·</div><div class="fn">min_order_amount</div><div class="ft">DECIMAL(10,2)</div></div>
+          <div class="fr"><div class="fi fmuted">·</div><div class="fn">max_uses / used_count</div><div class="ft">INTEGER</div></div>
+          <div class="fr"><div class="fi fmuted">·</div><div class="fn">expiry_date</div><div class="ft">TIMESTAMP</div></div>
+          <div class="fr"><div class="fi fmuted">·</div><div class="fn">is_active</div><div class="ft">BOOLEAN</div></div>
+        </div>
+        <div class="rtags"><span class="rt">PERCENTAGE</span><span class="rt">FLAT</span></div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════ ARCHITECTURE ═══════════════════ -->
+<div class="panel" id="tab-arch">
+  <h1 class="ph">System Architecture</h1>
+  <p class="pd">Spring Boot monolith with Redis, Kafka, PostgreSQL, Elasticsearch and S3/CDN</p>
+
+  <div class="arch-wrap">
+    <svg class="arch-svg" viewBox="0 0 920 640" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <marker id="arr" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto">
+          <polygon points="0 0,7 2.5,0 5" fill="#64748B"/>
+        </marker>
+        <marker id="arr-blue" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto">
+          <polygon points="0 0,7 2.5,0 5" fill="#3B82F6"/>
+        </marker>
+        <marker id="arr-green" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto">
+          <polygon points="0 0,7 2.5,0 5" fill="#10B981"/>
+        </marker>
+        <marker id="arr-pink" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto">
+          <polygon points="0 0,7 2.5,0 5" fill="#E879F9"/>
+        </marker>
+        <marker id="arr-red" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto">
+          <polygon points="0 0,7 2.5,0 5" fill="#F87171"/>
+        </marker>
+      </defs>
+
+      <!-- Zone backgrounds -->
+      <rect x="12" y="10" width="155" height="620" rx="8" fill="none" stroke="#3B82F6" stroke-width="1" stroke-dasharray="4 3" opacity=".25"/>
+      <text x="90" y="27" text-anchor="middle" font-size="9" fill="#3B82F6" font-family="monospace" opacity=".6">CLIENT</text>
+
+      <rect x="180" y="10" width="545" height="620" rx="8" fill="none" stroke="#8B5CF6" stroke-width="1" stroke-dasharray="4 3" opacity=".25"/>
+      <text x="452" y="27" text-anchor="middle" font-size="9" fill="#8B5CF6" font-family="monospace" opacity=".6">SPRING BOOT APPLICATION</text>
+
+      <rect x="740" y="10" width="168" height="620" rx="8" fill="none" stroke="#10B981" stroke-width="1" stroke-dasharray="4 3" opacity=".25"/>
+      <text x="824" y="27" text-anchor="middle" font-size="9" fill="#10B981" font-family="monospace" opacity=".6">DATA LAYER</text>
+
+      <!-- CLIENT boxes -->
+      <rect x="22" y="70" width="135" height="42" rx="6" fill="#1E3A5F" stroke="#3B82F6" stroke-width="1.5"/>
+      <text x="90" y="88" text-anchor="middle" font-size="11" fill="#93C5FD" font-family="monospace" font-weight="600">Web App</text>
+      <text x="90" y="103" text-anchor="middle" font-size="9" fill="#64748B" font-family="monospace">React / Next.js</text>
+
+      <rect x="22" y="128" width="135" height="42" rx="6" fill="#1E3A5F" stroke="#3B82F6" stroke-width="1.5"/>
+      <text x="90" y="146" text-anchor="middle" font-size="11" fill="#93C5FD" font-family="monospace" font-weight="600">Mobile App</text>
+      <text x="90" y="161" text-anchor="middle" font-size="9" fill="#64748B" font-family="monospace">React Native</text>
+
+      <!-- API Gateway -->
+      <rect x="192" y="55" width="155" height="52" rx="6" fill="#2D1B69" stroke="#8B5CF6" stroke-width="1.5"/>
+      <text x="270" y="76" text-anchor="middle" font-size="11" fill="#C4B5FD" font-family="monospace" font-weight="600">API Gateway</text>
+      <text x="270" y="91" text-anchor="middle" font-size="9" fill="#64748B" font-family="monospace">Rate Limit · CORS</text>
+      <text x="270" y="104" text-anchor="middle" font-size="9" fill="#64748B" font-family="monospace">JWT Filter · LB</text>
+
+      <!-- Auth Service -->
+      <rect x="192" y="140" width="155" height="52" rx="6" fill="#2D1B69" stroke="#A78BFA" stroke-width="1.5"/>
+      <text x="270" y="161" text-anchor="middle" font-size="11" fill="#C4B5FD" font-family="monospace" font-weight="600">Auth Service</text>
+      <text x="270" y="176" text-anchor="middle" font-size="9" fill="#64748B" font-family="monospace">JWT · OAuth2 · BCrypt</text>
+      <text x="270" y="189" text-anchor="middle" font-size="9" fill="#64748B" font-family="monospace">Spring Security 6</text>
+
+      <!-- Product Service -->
+      <rect x="372" y="140" width="145" height="52" rx="6" fill="#083344" stroke="#22D3EE" stroke-width="1.5"/>
+      <text x="445" y="161" text-anchor="middle" font-size="11" fill="#67E8F9" font-family="monospace" font-weight="600">Product Service</text>
+      <text x="445" y="176" text-anchor="middle" font-size="9" fill="#64748B" font-family="monospace">Catalog · Search</text>
+      <text x="445" y="189" text-anchor="middle" font-size="9" fill="#64748B" font-family="monospace">ModelMapper · DTO</text>
+
+      <!-- Order Service -->
+      <rect x="372" y="230" width="145" height="52" rx="6" fill="#083344" stroke="#22D3EE" stroke-width="1.5"/>
+      <text x="445" y="251" text-anchor="middle" font-size="11" fill="#67E8F9" font-family="monospace" font-weight="600">Order Service</text>
+      <text x="445" y="266" text-anchor="middle" font-size="9" fill="#64748B" font-family="monospace">Cart · Checkout</text>
+      <text x="445" y="279" text-anchor="middle" font-size="9" fill="#64748B" font-family="monospace">Payment · Coupon</text>
+
+      <!-- Notification Service -->
+      <rect x="192" y="230" width="155" height="52" rx="6" fill="#500724" stroke="#F472B6" stroke-width="1.5"/>
+      <text x="270" y="251" text-anchor="middle" font-size="11" fill="#F9A8D4" font-family="monospace" font-weight="600">Notification Svc</text>
+      <text x="270" y="266" text-anchor="middle" font-size="9" fill="#64748B" font-family="monospace">Email · SMS · Push</text>
+      <text x="270" y="279" text-anchor="middle" font-size="9" fill="#64748B" font-family="monospace">Kafka Consumer</text>
+
+      <!-- S3 / CDN -->
+      <rect x="537" y="140" width="145" height="52" rx="6" fill="#083344" stroke="#38BDF8" stroke-width="1.5"/>
+      <text x="610" y="161" text-anchor="middle" font-size="11" fill="#7DD3FC" font-family="monospace" font-weight="600">S3 / CDN</text>
+      <text x="610" y="176" text-anchor="middle" font-size="9" fill="#64748B" font-family="monospace">Product Images</text>
+      <text x="610" y="189" text-anchor="middle" font-size="9" fill="#64748B" font-family="monospace">CloudFront · MinIO</text>
+
+      <!-- Kafka -->
+      <rect x="192" y="360" width="330" height="52" rx="6" fill="#4A1942" stroke="#E879F9" stroke-width="1.5"/>
+      <text x="357" y="381" text-anchor="middle" font-size="11" fill="#E879F9" font-family="monospace" font-weight="600">Apache Kafka</text>
+      <text x="357" y="396" text-anchor="middle" font-size="9" fill="#A78BFA" font-family="monospace">order · payment · inventory · notification · user</text>
+      <text x="357" y="409" text-anchor="middle" font-size="9" fill="#64748B" font-family="monospace">partitions:3  replication:2  retention:7d</text>
+
+      <!-- Redis -->
+      <rect x="192" y="455" width="155" height="52" rx="6" fill="#450A0A" stroke="#F87171" stroke-width="1.5"/>
+      <text x="270" y="476" text-anchor="middle" font-size="11" fill="#FCA5A5" font-family="monospace" font-weight="600">Redis Cache</text>
+      <text x="270" y="491" text-anchor="middle" font-size="9" fill="#64748B" font-family="monospace">Sessions · Cart · OTP</text>
+      <text x="270" y="504" text-anchor="middle" font-size="9" fill="#64748B" font-family="monospace">Rate Limit · Catalog</text>
+
+      <!-- Elasticsearch -->
+      <rect x="372" y="455" width="150" height="52" rx="6" fill="#451A03" stroke="#FB923C" stroke-width="1.5"/>
+      <text x="447" y="476" text-anchor="middle" font-size="11" fill="#FDBA74" font-family="monospace" font-weight="600">Elasticsearch</text>
+      <text x="447" y="491" text-anchor="middle" font-size="9" fill="#64748B" font-family="monospace">Full-text Search</text>
+      <text x="447" y="504" text-anchor="middle" font-size="9" fill="#64748B" font-family="monospace">Product Indexing</text>
+
+      <!-- PostgreSQL -->
+      <rect x="752" y="70" width="148" height="52" rx="6" fill="#064E3B" stroke="#10B981" stroke-width="1.5"/>
+      <text x="826" y="91" text-anchor="middle" font-size="11" fill="#6EE7B7" font-family="monospace" font-weight="600">PostgreSQL</text>
+      <text x="826" y="106" text-anchor="middle" font-size="9" fill="#64748B" font-family="monospace">Primary + Read Replica</text>
+      <text x="826" y="119" text-anchor="middle" font-size="9" fill="#64748B" font-family="monospace">JPA / Hibernate</text>
+
+      <!-- ZooKeeper -->
+      <rect x="752" y="360" width="148" height="52" rx="6" fill="#4A1942" stroke="#E879F9" stroke-width="1.5"/>
+      <text x="826" y="381" text-anchor="middle" font-size="11" fill="#E879F9" font-family="monospace" font-weight="600">ZooKeeper</text>
+      <text x="826" y="396" text-anchor="middle" font-size="9" fill="#64748B" font-family="monospace">Kafka Coordination</text>
+      <text x="826" y="409" text-anchor="middle" font-size="9" fill="#64748B" font-family="monospace">Leader Election</text>
+
+      <!-- Resilience4j label -->
+      <rect x="372" y="195" width="145" height="6" rx="3" fill="none" stroke="#F59E0B" stroke-width=".8" stroke-dasharray="3 2"/>
+      <text x="445" y="209" text-anchor="middle" font-size="7.5" fill="#F59E0B" font-family="monospace">⚡ Resilience4j Circuit Breaker</text>
+
+      <!-- Arrows -->
+      <!-- Clients → Gateway -->
+      <line x1="157" y1="91" x2="192" y2="81" stroke="#3B82F6" stroke-width="1.5" marker-end="url(#arr-blue)" opacity=".8"/>
+      <line x1="157" y1="149" x2="192" y2="165" stroke="#3B82F6" stroke-width="1.5" marker-end="url(#arr-blue)" opacity=".8"/>
+      <!-- Gateway → Auth -->
+      <line x1="270" y1="107" x2="270" y2="140" stroke="#A78BFA" stroke-width="1.5" marker-end="url(#arr)" opacity=".7"/>
+      <!-- Gateway → Product -->
+      <line x1="347" y1="82" x2="372" y2="155" stroke="#22D3EE" stroke-width="1.2" marker-end="url(#arr)" opacity=".6"/>
+      <!-- Gateway → Order -->
+      <line x1="347" y1="82" x2="420" y2="230" stroke="#22D3EE" stroke-width="1" stroke-dasharray="4 2" marker-end="url(#arr)" opacity=".4"/>
+      <!-- Product → S3 -->
+      <line x1="517" y1="166" x2="537" y2="166" stroke="#38BDF8" stroke-width="1.2" marker-end="url(#arr)" opacity=".7"/>
+      <!-- Services → Kafka -->
+      <line x1="300" y1="282" x2="300" y2="360" stroke="#E879F9" stroke-width="1.5" marker-end="url(#arr-pink)" opacity=".7"/>
+      <line x1="445" y1="282" x2="410" y2="360" stroke="#E879F9" stroke-width="1.5" marker-end="url(#arr-pink)" opacity=".7"/>
+      <!-- Kafka → Notification -->
+      <line x1="250" y1="360" x2="250" y2="282" stroke="#F472B6" stroke-width="1.5" marker-end="url(#arr)" opacity=".8"/>
+      <!-- Kafka → ZooKeeper -->
+      <line x1="522" y1="386" x2="752" y2="386" stroke="#E879F9" stroke-width="1.2" marker-end="url(#arr-pink)" opacity=".5"/>
+      <!-- Services → PostgreSQL -->
+      <line x1="682" y1="166" x2="752" y2="96" stroke="#10B981" stroke-width="1.5" marker-end="url(#arr-green)" opacity=".7"/>
+      <line x1="517" y1="256" x2="752" y2="120" stroke="#10B981" stroke-width="1.2" marker-end="url(#arr-green)" opacity=".6"/>
+      <!-- Services → Redis (dashed) -->
+      <line x1="270" y1="455" x2="270" y2="390" stroke="#F87171" stroke-width="1.2" stroke-dasharray="4 2" marker-end="url(#arr-red)" opacity=".7"/>
+      <!-- Product → ES (dashed) -->
+      <line x1="447" y1="455" x2="447" y2="390" stroke="#FB923C" stroke-width="1.2" stroke-dasharray="4 2" marker-end="url(#arr)" opacity=".7"/>
+      <!-- Auth → Redis (dashed, curved) -->
+      <path d="M 215 192 Q 180 325 215 455" stroke="#F87171" stroke-width="1" stroke-dasharray="3 3" fill="none" marker-end="url(#arr-red)" opacity=".5"/>
+
+      <!-- Legend -->
+      <rect x="192" y="565" width="530" height="58" rx="6" fill="var(--bg-card,#111D35)" opacity=".7"/>
+      <text x="210" y="582" font-size="9" fill="#64748B" font-family="monospace" font-weight="600">LEGEND</text>
+      <line x1="265" y1="579" x2="290" y2="579" stroke="#3B82F6" stroke-width="1.5" marker-end="url(#arr-blue)"/>
+      <text x="295" y="582" font-size="8.5" fill="#94A3B8" font-family="monospace">HTTP/REST</text>
+      <line x1="355" y1="579" x2="380" y2="579" stroke="#E879F9" stroke-width="1.5" marker-end="url(#arr-pink)"/>
+      <text x="385" y="582" font-size="8.5" fill="#94A3B8" font-family="monospace">Kafka Events</text>
+      <line x1="450" y1="579" x2="475" y2="579" stroke="#F87171" stroke-width="1" stroke-dasharray="4 2" marker-end="url(#arr-red)"/>
+      <text x="480" y="582" font-size="8.5" fill="#94A3B8" font-family="monospace">Cache Ops</text>
+      <line x1="540" y1="579" x2="565" y2="579" stroke="#10B981" stroke-width="1.5" marker-end="url(#arr-green)"/>
+      <text x="570" y="582" font-size="8.5" fill="#94A3B8" font-family="monospace">DB Read/Write</text>
+      <line x1="265" y1="601" x2="290" y2="601" stroke="#FB923C" stroke-width="1" stroke-dasharray="4 2" marker-end="url(#arr)"/>
+      <text x="295" y="604" font-size="8.5" fill="#94A3B8" font-family="monospace">Search Index</text>
+      <line x1="355" y1="601" x2="380" y2="601" stroke="#38BDF8" stroke-width="1.2" marker-end="url(#arr)"/>
+      <text x="385" y="604" font-size="8.5" fill="#94A3B8" font-family="monospace">File / CDN</text>
+    </svg>
+  </div>
+
+  <div style="margin-top:1.25rem">
+    <div class="dlabel">Tech Stack</div>
+    <div class="chip-row">
+      <span class="chip">Spring Boot 3.x</span><span class="chip">Spring Security 6</span><span class="chip">Spring Data JPA</span>
+      <span class="chip">PostgreSQL 15</span><span class="chip">Redis 7</span><span class="chip">Apache Kafka 3.x</span>
+      <span class="chip">Elasticsearch 8</span><span class="chip">ModelMapper</span><span class="chip">Lombok</span>
+      <span class="chip">jjwt</span><span class="chip">Resilience4j</span><span class="chip">Flyway</span>
+      <span class="chip">Docker + K8s</span><span class="chip">S3 / MinIO</span>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════ AUTH ═══════════════════ -->
+<div class="panel" id="tab-auth">
+  <h1 class="ph">Authentication &amp; Authorization</h1>
+  <p class="pd">JWT lifecycle, OAuth2 social login, token rotation, and RBAC</p>
+
+  <div class="flow-grid">
+    <div class="fc">
+      <div class="fc-title" style="color:var(--accent2)">JWT Login Flow</div>
+      <div class="fc-body"><div class="steps">
+        <div class="step"><div class="snum">1</div><div class="scontent"><div class="stitle">POST /api/auth/login</div><div class="sdetail">Client sends { email, password }</div></div></div>
+        <div class="step"><div class="snum">2</div><div class="scontent"><div class="stitle">AuthenticationManager</div><div class="sdetail">Spring Security validates via UsernamePasswordAuthToken</div></div></div>
+        <div class="step"><div class="snum">3</div><div class="scontent"><div class="stitle">UserDetailsServiceImpl</div><div class="sdetail">Loads user from DB, verifies BCrypt hash</div></div></div>
+        <div class="step"><div class="snum">4</div><div class="scontent"><div class="stitle">JwtUtils.generateTokens()</div><div class="sdetail">Access Token (15 min) + Refresh Token (7 days). Refresh stored in DB &amp; Redis</div></div></div>
+        <div class="step"><div class="snum">5</div><div class="scontent"><div class="stitle">Response</div><div class="sdetail">{ accessToken } in body, refreshToken in httpOnly cookie</div></div></div>
+      </div></div>
+    </div>
+
+    <div class="fc">
+      <div class="fc-title" style="color:var(--accent2)">Request Authorization</div>
+      <div class="fc-body"><div class="steps">
+        <div class="step"><div class="snum">1</div><div class="scontent"><div class="stitle">JwtAuthFilter (OncePerRequest)</div><div class="sdetail">Extracts Bearer token from Authorization header</div></div></div>
+        <div class="step"><div class="snum">2</div><div class="scontent"><div class="stitle">Token Validation</div><div class="sdetail">Verifies signature, expiry; checks Redis blacklist for revoked JTIs</div></div></div>
+        <div class="step"><div class="snum">3</div><div class="scontent"><div class="stitle">SecurityContextHolder</div><div class="sdetail">Sets UsernamePasswordAuthToken with UserDetails and granted authorities</div></div></div>
+        <div class="step"><div class="snum">4</div><div class="scontent"><div class="stitle">@PreAuthorize</div><div class="sdetail">Method-level RBAC guards — hasRole('ADMIN'), hasRole('SELLER')</div></div></div>
+        <div class="step"><div class="snum">5</div><div class="scontent"><div class="stitle">@AuthenticationPrincipal</div><div class="sdetail">Controller receives authenticated UserDetails</div></div></div>
+      </div></div>
+    </div>
+
+    <div class="fc">
+      <div class="fc-title" style="color:var(--ok)">Token Refresh &amp; Rotation</div>
+      <div class="fc-body"><div class="steps">
+        <div class="step"><div class="snum">1</div><div class="scontent"><div class="stitle">Access token expires → 401</div><div class="sdetail">Client intercepts 401 Unauthorized</div></div></div>
+        <div class="step"><div class="snum">2</div><div class="scontent"><div class="stitle">POST /api/auth/refresh</div><div class="sdetail">Sends refresh token from httpOnly cookie</div></div></div>
+        <div class="step"><div class="snum">3</div><div class="scontent"><div class="stitle">DB Validation</div><div class="sdetail">Check refresh_tokens: not revoked, not expired, matches user</div></div></div>
+        <div class="step"><div class="snum">4</div><div class="scontent"><div class="stitle">Token Rotation</div><div class="sdetail">Old refresh token revoked in DB; new pair issued (prevents reuse)</div></div></div>
+        <div class="step"><div class="snum">5</div><div class="scontent"><div class="stitle">Retry original request</div><div class="sdetail">Client queues and retries failed requests with new access token</div></div></div>
+      </div></div>
+    </div>
+
+    <div class="fc">
+      <div class="fc-title" style="color:var(--ok)">OAuth2 Google / GitHub</div>
+      <div class="fc-body"><div class="steps">
+        <div class="step"><div class="snum">1</div><div class="scontent"><div class="stitle">GET /oauth2/authorize/google</div><div class="sdetail">Spring Security redirects to provider consent screen</div></div></div>
+        <div class="step"><div class="snum">2</div><div class="scontent"><div class="stitle">Callback with auth code</div><div class="sdetail">Provider redirects to /oauth2/callback/google with code</div></div></div>
+        <div class="step"><div class="snum">3</div><div class="scontent"><div class="stitle">CustomOAuth2UserService</div><div class="sdetail">Fetches user profile from provider, upserts local users record</div></div></div>
+        <div class="step"><div class="snum">4</div><div class="scontent"><div class="stitle">Issue JWT pair</div><div class="sdetail">Same flow as password login; returned via redirect params to client</div></div></div>
+      </div></div>
+    </div>
+  </div>
+
+  <div style="margin-top:1.25rem">
+    <div class="dlabel">RBAC Permission Matrix</div>
+    <div style="overflow-x:auto;border:1px solid var(--border);border-radius:8px;">
+      <table class="api-tbl" style="display:table">
+        <thead><tr><th>Resource</th><th>ROLE_USER</th><th>ROLE_SELLER</th><th>ROLE_ADMIN</th></tr></thead>
+        <tbody>
+          <tr><td>Browse products</td><td style="color:var(--ok)">✓ Read</td><td style="color:var(--ok)">✓ Read</td><td style="color:var(--ok)">✓ Read</td></tr>
+          <tr><td>Manage products</td><td style="color:var(--danger)">✗</td><td style="color:var(--ok)">✓ Own only</td><td style="color:var(--ok)">✓ All</td></tr>
+          <tr><td>Manage categories</td><td style="color:var(--danger)">✗</td><td style="color:var(--danger)">✗</td><td style="color:var(--ok)">✓ Full</td></tr>
+          <tr><td>Place orders</td><td style="color:var(--ok)">✓ Own</td><td style="color:var(--ok)">✓ Own</td><td style="color:var(--ok)">✓ All</td></tr>
+          <tr><td>View all orders</td><td style="color:var(--danger)">✗</td><td style="color:var(--danger)">✗</td><td style="color:var(--ok)">✓ Full</td></tr>
+          <tr><td>Issue coupons</td><td style="color:var(--danger)">✗</td><td style="color:var(--danger)">✗</td><td style="color:var(--ok)">✓ Full</td></tr>
+          <tr><td>User management</td><td style="color:var(--danger)">✗</td><td style="color:var(--danger)">✗</td><td style="color:var(--ok)">✓ Full</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════ KAFKA ═══════════════════ -->
+<div class="panel" id="tab-kafka">
+  <h1 class="ph">Kafka Event Streams</h1>
+  <p class="pd">Topics, event types, producers, and consumer group routing</p>
+
+  <div class="topics-grid">
+
+    <div class="tkcard">
+      <div class="tk-hdr"><div class="tkname">order-events</div><div class="tkpart">p:3 · r:2 · 7d</div></div>
+      <div class="evlist">
+        <div class="ev"><div class="edot" style="background:var(--warn)"></div><div class="ename">ORDER_PLACED</div><div class="eprod">Order Svc</div></div>
+        <div class="ev"><div class="edot" style="background:var(--ok)"></div><div class="ename">ORDER_CONFIRMED</div><div class="eprod">Order Svc</div></div>
+        <div class="ev"><div class="edot" style="background:var(--accent)"></div><div class="ename">ORDER_SHIPPED</div><div class="eprod">Admin</div></div>
+        <div class="ev"><div class="edot" style="background:var(--ok)"></div><div class="ename">ORDER_DELIVERED</div><div class="eprod">Admin</div></div>
+        <div class="ev"><div class="edot" style="background:var(--danger)"></div><div class="ename">ORDER_CANCELLED</div><div class="eprod">User / Admin</div></div>
+        <div class="ev"><div class="edot" style="background:var(--danger)"></div><div class="ename">ORDER_REFUND_INITIATED</div><div class="eprod">Order Svc</div></div>
+      </div>
+      <div class="rtags"><span class="rt">→ Notification Svc</span><span class="rt">→ Inventory Svc</span></div>
+    </div>
+
+    <div class="tkcard">
+      <div class="tk-hdr"><div class="tkname">payment-events</div><div class="tkpart">p:3 · r:2 · 30d</div></div>
+      <div class="evlist">
+        <div class="ev"><div class="edot" style="background:var(--warn)"></div><div class="ename">PAYMENT_INITIATED</div><div class="eprod">Order Svc</div></div>
+        <div class="ev"><div class="edot" style="background:var(--ok)"></div><div class="ename">PAYMENT_SUCCESS</div><div class="eprod">Gateway webhook</div></div>
+        <div class="ev"><div class="edot" style="background:var(--danger)"></div><div class="ename">PAYMENT_FAILED</div><div class="eprod">Gateway webhook</div></div>
+        <div class="ev"><div class="edot" style="background:var(--accent2)"></div><div class="ename">PAYMENT_REFUNDED</div><div class="eprod">Gateway webhook</div></div>
+      </div>
+      <div class="rtags"><span class="rt">→ Order Svc</span><span class="rt">→ Notification Svc</span></div>
+    </div>
+
+    <div class="tkcard">
+      <div class="tk-hdr"><div class="tkname">inventory-events</div><div class="tkpart">p:2 · r:2 · 3d</div></div>
+      <div class="evlist">
+        <div class="ev"><div class="edot" style="background:var(--ok)"></div><div class="ename">STOCK_UPDATED</div><div class="eprod">Product Svc</div></div>
+        <div class="ev"><div class="edot" style="background:var(--warn)"></div><div class="ename">LOW_STOCK_ALERT</div><div class="eprod">Inventory Svc</div></div>
+        <div class="ev"><div class="edot" style="background:var(--danger)"></div><div class="ename">OUT_OF_STOCK</div><div class="eprod">Inventory Svc</div></div>
+        <div class="ev"><div class="edot" style="background:var(--accent)"></div><div class="ename">STOCK_RESERVED</div><div class="eprod">Order Svc</div></div>
+        <div class="ev"><div class="edot" style="background:var(--accent2)"></div><div class="ename">STOCK_RELEASED</div><div class="eprod">Order Svc</div></div>
+      </div>
+      <div class="rtags"><span class="rt">→ Product Svc</span><span class="rt">→ Admin</span></div>
+    </div>
+
+    <div class="tkcard">
+      <div class="tk-hdr"><div class="tkname">notification-events</div><div class="tkpart">p:2 · r:1 · 1d</div></div>
+      <div class="evlist">
+        <div class="ev"><div class="edot" style="background:var(--accent)"></div><div class="ename">EMAIL_SEND</div><div class="eprod">Any service</div></div>
+        <div class="ev"><div class="edot" style="background:var(--ok)"></div><div class="ename">SMS_SEND</div><div class="eprod">Any service</div></div>
+        <div class="ev"><div class="edot" style="background:var(--accent2)"></div><div class="ename">PUSH_NOTIFICATION</div><div class="eprod">Any service</div></div>
+        <div class="ev"><div class="edot" style="background:var(--warn)"></div><div class="ename">OTP_REQUEST</div><div class="eprod">Auth Svc</div></div>
+      </div>
+      <div class="rtags"><span class="rt">→ Notification Svc</span></div>
+    </div>
+
+    <div class="tkcard">
+      <div class="tk-hdr"><div class="tkname">user-events</div><div class="tkpart">p:2 · r:1 · 14d</div></div>
+      <div class="evlist">
+        <div class="ev"><div class="edot" style="background:var(--ok)"></div><div class="ename">USER_REGISTERED</div><div class="eprod">Auth Svc</div></div>
+        <div class="ev"><div class="edot" style="background:var(--accent)"></div><div class="ename">USER_LOGIN</div><div class="eprod">Auth Svc</div></div>
+        <div class="ev"><div class="edot" style="background:var(--warn)"></div><div class="ename">USER_PROFILE_UPDATED</div><div class="eprod">User Svc</div></div>
+        <div class="ev"><div class="edot" style="background:var(--danger)"></div><div class="ename">USER_DEACTIVATED</div><div class="eprod">Admin</div></div>
+      </div>
+      <div class="rtags"><span class="rt">→ Notification Svc</span><span class="rt">→ Analytics</span></div>
+    </div>
+
+    <div class="tkcard">
+      <div class="tk-hdr"><div class="tkname">product-events</div><div class="tkpart">p:2 · r:1 · 7d</div></div>
+      <div class="evlist">
+        <div class="ev"><div class="edot" style="background:var(--ok)"></div><div class="ename">PRODUCT_CREATED</div><div class="eprod">Product Svc</div></div>
+        <div class="ev"><div class="edot" style="background:var(--warn)"></div><div class="ename">PRODUCT_UPDATED</div><div class="eprod">Product Svc</div></div>
+        <div class="ev"><div class="edot" style="background:var(--accent2)"></div><div class="ename">PRICE_CHANGED</div><div class="eprod">Product Svc</div></div>
+        <div class="ev"><div class="edot" style="background:var(--danger)"></div><div class="ename">PRODUCT_DELETED</div><div class="eprod">Admin</div></div>
+      </div>
+      <div class="rtags"><span class="rt">→ Elasticsearch</span><span class="rt">→ Cache Invalidate</span></div>
+    </div>
+
+  </div>
+
+  <div style="margin-top:1.25rem">
+    <div class="dlabel">application.yml — Kafka</div>
+    <div class="arch-wrap" style="padding:.9rem">
+      <pre style="font-family:'JetBrains Mono',monospace;font-size:.7rem;color:var(--text-muted)">spring:
+  kafka:
+    bootstrap-servers: localhost:9092
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+      acks: all          <span style="color:var(--ok)"># wait for all replicas to acknowledge</span>
+      retries: 3
+    consumer:
+      group-id: ecom-notification-group
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+    listener:
+      ack-mode: MANUAL_IMMEDIATE  <span style="color:var(--ok)"># manual commit for at-least-once delivery</span></pre>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════ REDIS ═══════════════════ -->
+<div class="panel" id="tab-redis">
+  <h1 class="ph">Redis Cache Strategy</h1>
+  <p class="pd">Key patterns, TTL policies, data types, and eviction rules</p>
+
+  <div class="redis-grid">
+
+    <div class="rcard">
+      <div class="rtitle">Session Store</div>
+      <div class="rpat">session:{userId}:{sessionId}<br>→ HASH { roles, ip, userAgent, lastActivity }</div>
+      <div class="rttl"><span>TTL: 30 min sliding</span><span>Type: HASH</span><span>Evict: LRU</span></div>
+    </div>
+
+    <div class="rcard">
+      <div class="rtitle">JWT Blacklist</div>
+      <div class="rpat">jwt:blacklist:{jti}<br>→ "revoked"</div>
+      <div class="rttl"><span>TTL: = token expiry</span><span>Type: STRING</span><span>Use: Logout</span></div>
+    </div>
+
+    <div class="rcard">
+      <div class="rtitle">Shopping Cart</div>
+      <div class="rpat">cart:{userId}<br>→ HASH { productId: { qty, price, name } }</div>
+      <div class="rttl"><span>TTL: 7 days</span><span>Type: HASH</span><span>Sync: checkout → DB</span></div>
+    </div>
+
+    <div class="rcard">
+      <div class="rtitle">Rate Limiting</div>
+      <div class="rpat">rate:{ip}:{endpoint}<br>→ request_count (INCR + EXPIRE)</div>
+      <div class="rttl"><span>TTL: 60 s window</span><span>Type: STRING</span><span>Limit: 100/min</span></div>
+    </div>
+
+    <div class="rcard">
+      <div class="rtitle">Product Cache</div>
+      <div class="rpat">product:{productId}  → JSON<br>category:{id}:products → LIST of IDs</div>
+      <div class="rttl"><span>TTL: 10 min</span><span>Type: STRING</span><span>Evict: on update</span></div>
+    </div>
+
+    <div class="rcard">
+      <div class="rtitle">OTP Store</div>
+      <div class="rpat">otp:{email}<br>→ HASH { code, attempts, type }</div>
+      <div class="rttl"><span>TTL: 5 min</span><span>Type: HASH</span><span>Max attempts: 3</span></div>
+    </div>
+
+    <div class="rcard">
+      <div class="rtitle">Popular Products</div>
+      <div class="rpat">leaderboard:products:views<br>→ ZSET { productId: view_score }</div>
+      <div class="rttl"><span>TTL: 24 h refresh</span><span>Type: SORTED SET</span><span>Query: ZREVRANGE</span></div>
+    </div>
+
+    <div class="rcard">
+      <div class="rtitle">Pub/Sub Real-time</div>
+      <div class="rpat">Channel: order-status-updates<br>Channel: stock-alerts · price-drops</div>
+      <div class="rttl"><span>TTL: none (stream)</span><span>Type: PUB/SUB</span><span>Bridge: STOMP/WS</span></div>
+    </div>
+
+  </div>
+
+  <div style="margin-top:1.25rem">
+    <div class="dlabel">application.yml — Redis + Caching</div>
+    <div class="arch-wrap" style="padding:.9rem">
+      <pre style="font-family:'JetBrains Mono',monospace;font-size:.7rem;color:var(--text-muted)">spring:
+  cache:
+    type: redis
+  redis:
+    host: localhost
+    port: 6379
+    timeout: 2000ms
+    lettuce:
+      pool: { max-active: 10, max-idle: 8, min-idle: 2 }
+
+<span style="color:var(--ok)"># @EnableCaching on @SpringBootApplication
+# @Cacheable(value="products", key="#productId")        → auto-cache on read
+# @CacheEvict(value="products", key="#productId")       → invalidate on write
+# RedisCacheConfiguration.defaultCacheConfig()
+#   .entryTtl(Duration.ofMinutes(10))
+#   .disableCachingNullValues()</span></pre>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════ API REFERENCE ═══════════════════ -->
+<div class="panel" id="tab-api">
+  <h1 class="ph">API Reference</h1>
+  <p class="pd">REST endpoints — base path: <code style="font-family:'JetBrains Mono',monospace;font-size:.82rem">/api</code></p>
+
+  <div class="api-sec">
+    <div class="dlabel" style="color:var(--accent2)">Authentication</div>
+    <div style="overflow-x:auto;border:1px solid var(--border);border-radius:8px;">
+      <table class="api-tbl" style="display:table">
+        <thead><tr><th>Method</th><th>Endpoint</th><th>Description</th><th>Auth</th></tr></thead>
+        <tbody>
+          <tr><td><span class="mth mpost">POST</span></td><td><span class="apath">/auth/register</span></td><td>Register new user account</td><td><span class="abadge apub">PUBLIC</span></td></tr>
+          <tr><td><span class="mth mpost">POST</span></td><td><span class="apath">/auth/login</span></td><td>Login, receive JWT pair</td><td><span class="abadge apub">PUBLIC</span></td></tr>
+          <tr><td><span class="mth mpost">POST</span></td><td><span class="apath">/auth/refresh</span></td><td>Refresh access token (rotation)</td><td><span class="abadge apub">PUBLIC</span></td></tr>
+          <tr><td><span class="mth mpost">POST</span></td><td><span class="apath">/auth/logout</span></td><td>Revoke tokens, blacklist JTI</td><td><span class="abadge ausr">USER</span></td></tr>
+          <tr><td><span class="mth mget">GET</span></td><td><span class="apath">/oauth2/authorize/{provider}</span></td><td>OAuth2 social login redirect</td><td><span class="abadge apub">PUBLIC</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="api-sec">
+    <div class="dlabel" style="color:var(--ok)">Categories</div>
+    <div style="overflow-x:auto;border:1px solid var(--border);border-radius:8px;">
+      <table class="api-tbl" style="display:table">
+        <thead><tr><th>Method</th><th>Endpoint</th><th>Description</th><th>Auth</th></tr></thead>
+        <tbody>
+          <tr><td><span class="mth mget">GET</span></td><td><span class="apath">/public/categories</span></td><td>List all (paginated) ?pageNumber &amp; pageSize</td><td><span class="abadge apub">PUBLIC</span></td></tr>
+          <tr><td><span class="mth mpost">POST</span></td><td><span class="apath">/public/categories</span></td><td>Create category</td><td><span class="abadge ausr">USER</span></td></tr>
+          <tr><td><span class="mth mput">PUT</span></td><td><span class="apath">/public/categories/{id}</span></td><td>Update category</td><td><span class="abadge ausr">USER</span></td></tr>
+          <tr><td><span class="mth mdel">DELETE</span></td><td><span class="apath">/admin/categories/{id}</span></td><td>Delete category</td><td><span class="abadge aadm">ADMIN</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="api-sec">
+    <div class="dlabel" style="color:var(--ok)">Products</div>
+    <div style="overflow-x:auto;border:1px solid var(--border);border-radius:8px;">
+      <table class="api-tbl" style="display:table">
+        <thead><tr><th>Method</th><th>Endpoint</th><th>Description</th><th>Auth</th></tr></thead>
+        <tbody>
+          <tr><td><span class="mth mget">GET</span></td><td><span class="apath">/public/products</span></td><td>List products (paged + sorted)</td><td><span class="abadge apub">PUBLIC</span></td></tr>
+          <tr><td><span class="mth mget">GET</span></td><td><span class="apath">/public/products/{id}</span></td><td>Get product detail</td><td><span class="abadge apub">PUBLIC</span></td></tr>
+          <tr><td><span class="mth mget">GET</span></td><td><span class="apath">/public/products/keyword/{kw}</span></td><td>Search products by keyword</td><td><span class="abadge apub">PUBLIC</span></td></tr>
+          <tr><td><span class="mth mget">GET</span></td><td><span class="apath">/public/categories/{catId}/products</span></td><td>Products by category</td><td><span class="abadge apub">PUBLIC</span></td></tr>
+          <tr><td><span class="mth mpost">POST</span></td><td><span class="apath">/admin/categories/{catId}/products</span></td><td>Create product</td><td><span class="abadge aadm">ADMIN</span></td></tr>
+          <tr><td><span class="mth mput">PUT</span></td><td><span class="apath">/admin/products/{id}</span></td><td>Update product details</td><td><span class="abadge aadm">ADMIN</span></td></tr>
+          <tr><td><span class="mth mput">PUT</span></td><td><span class="apath">/admin/products/{id}/image</span></td><td>Upload product image (multipart)</td><td><span class="abadge aadm">ADMIN</span></td></tr>
+          <tr><td><span class="mth mdel">DELETE</span></td><td><span class="apath">/admin/products/{id}</span></td><td>Delete product</td><td><span class="abadge aadm">ADMIN</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="api-sec">
+    <div class="dlabel" style="color:var(--warn)">Cart</div>
+    <div style="overflow-x:auto;border:1px solid var(--border);border-radius:8px;">
+      <table class="api-tbl" style="display:table">
+        <thead><tr><th>Method</th><th>Endpoint</th><th>Description</th><th>Auth</th></tr></thead>
+        <tbody>
+          <tr><td><span class="mth mget">GET</span></td><td><span class="apath">/carts</span></td><td>Get current user's cart</td><td><span class="abadge ausr">USER</span></td></tr>
+          <tr><td><span class="mth mpost">POST</span></td><td><span class="apath">/carts/products/{productId}/quantity/{qty}</span></td><td>Add item to cart</td><td><span class="abadge ausr">USER</span></td></tr>
+          <tr><td><span class="mth mput">PUT</span></td><td><span class="apath">/cart/products/{productId}/quantity/{op}</span></td><td>Increase / decrease quantity</td><td><span class="abadge ausr">USER</span></td></tr>
+          <tr><td><span class="mth mdel">DELETE</span></td><td><span class="apath">/carts/{cartId}/products/{productId}</span></td><td>Remove item from cart</td><td><span class="abadge ausr">USER</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="api-sec">
+    <div class="dlabel" style="color:var(--danger)">Orders &amp; Payments</div>
+    <div style="overflow-x:auto;border:1px solid var(--border);border-radius:8px;">
+      <table class="api-tbl" style="display:table">
+        <thead><tr><th>Method</th><th>Endpoint</th><th>Description</th><th>Auth</th></tr></thead>
+        <tbody>
+          <tr><td><span class="mth mpost">POST</span></td><td><span class="apath">/order/users/payments/{payMethod}</span></td><td>Place order from cart</td><td><span class="abadge ausr">USER</span></td></tr>
+          <tr><td><span class="mth mget">GET</span></td><td><span class="apath">/orders/my</span></td><td>Current user's order history</td><td><span class="abadge ausr">USER</span></td></tr>
+          <tr><td><span class="mth mget">GET</span></td><td><span class="apath">/orders/{orderId}</span></td><td>Get order detail</td><td><span class="abadge ausr">USER</span></td></tr>
+          <tr><td><span class="mth mget">GET</span></td><td><span class="apath">/admin/orders</span></td><td>All orders (admin, paged)</td><td><span class="abadge aadm">ADMIN</span></td></tr>
+          <tr><td><span class="mth mput">PUT</span></td><td><span class="apath">/admin/orders/{id}/status</span></td><td>Update order status</td><td><span class="abadge aadm">ADMIN</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="api-sec">
+    <div class="dlabel" style="color:var(--accent)">Users &amp; Addresses</div>
+    <div style="overflow-x:auto;border:1px solid var(--border);border-radius:8px;">
+      <table class="api-tbl" style="display:table">
+        <thead><tr><th>Method</th><th>Endpoint</th><th>Description</th><th>Auth</th></tr></thead>
+        <tbody>
+          <tr><td><span class="mth mget">GET</span></td><td><span class="apath">/users/profile</span></td><td>Get current user profile</td><td><span class="abadge ausr">USER</span></td></tr>
+          <tr><td><span class="mth mput">PUT</span></td><td><span class="apath">/users/profile</span></td><td>Update profile</td><td><span class="abadge ausr">USER</span></td></tr>
+          <tr><td><span class="mth mpost">POST</span></td><td><span class="apath">/addresses</span></td><td>Add address</td><td><span class="abadge ausr">USER</span></td></tr>
+          <tr><td><span class="mth mget">GET</span></td><td><span class="apath">/addresses</span></td><td>List user addresses</td><td><span class="abadge ausr">USER</span></td></tr>
+          <tr><td><span class="mth mput">PUT</span></td><td><span class="apath">/addresses/{id}</span></td><td>Update address</td><td><span class="abadge ausr">USER</span></td></tr>
+          <tr><td><span class="mth mdel">DELETE</span></td><td><span class="apath">/addresses/{id}</span></td><td>Delete address</td><td><span class="abadge ausr">USER</span></td></tr>
+          <tr><td><span class="mth mget">GET</span></td><td><span class="apath">/admin/users</span></td><td>List all users</td><td><span class="abadge aadm">ADMIN</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+</main>
+
+<script>
+function sw(id, el) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('on'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('on'));
+  document.getElementById('tab-' + id).classList.add('on');
+  el.classList.add('on');
+  try { localStorage.setItem('sc-tab', id); } catch(e){}
+}
+function toggleTheme() {
+  const r = document.documentElement;
+  const cur = r.getAttribute('data-theme');
+  const dark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+  if (!cur) r.setAttribute('data-theme', dark ? 'light' : 'dark');
+  else if (cur === 'dark') r.setAttribute('data-theme', 'light');
+  else r.removeAttribute('data-theme');
+  try { localStorage.setItem('sc-theme', r.getAttribute('data-theme') || 'system'); } catch(e){}
+}
+try {
+  const t = localStorage.getItem('sc-tab');
+  if (t) {
+    const btn = [...document.querySelectorAll('.tab')].find(b => b.getAttribute('onclick').includes("'"+t+"'"));
+    if (btn) btn.click();
+  }
+  const th = localStorage.getItem('sc-theme');
+  if (th && th !== 'system') document.documentElement.setAttribute('data-theme', th);
+} catch(e){}
+</script>
+
+</body></html>

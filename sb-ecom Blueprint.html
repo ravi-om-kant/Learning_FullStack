@@ -1,0 +1,1575 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>sb-ecom Blueprint</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+:root {
+  --bg: #F8FAFC; --bg-surface: #FFFFFF; --bg-card: #F1F5F9; --bg-code: #E8EDF5;
+  --border: #CBD5E1; --text: #0F172A; --text-muted: #64748B; --text-head: #1E293B;
+  --accent: #2563EB; --accent-s: #DBEAFE; --accent2: #7C3AED; --accent2-s: #EDE9FE;
+  --ok: #059669; --ok-s: #D1FAE5; --warn: #D97706; --warn-s: #FEF3C7;
+  --danger: #DC2626; --danger-s: #FEE2E2; --kafka: #DB2777; --kafka-s: #FCE7F0;
+  --redis: #DC2626; --redis-s: #FEE2E2; --db: #0891B2; --db-s: #CFFAFE;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg:#060B18;--bg-surface:#0D1526;--bg-card:#111D35;--bg-code:#0A1222;
+    --border:#1E2D4A;--text:#E2E8F0;--text-muted:#64748B;--text-head:#F1F5F9;
+    --accent:#3B82F6;--accent-s:#1E3A5F;--accent2:#A78BFA;--accent2-s:#2D1B69;
+    --ok:#10B981;--ok-s:#064E3B;--warn:#F59E0B;--warn-s:#451A03;
+    --danger:#EF4444;--danger-s:#450A0A;--kafka:#F472B6;--kafka-s:#500724;
+    --redis:#F87171;--redis-s:#450A0A;--db:#22D3EE;--db-s:#083344;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg:#060B18;--bg-surface:#0D1526;--bg-card:#111D35;--bg-code:#0A1222;
+  --border:#1E2D4A;--text:#E2E8F0;--text-muted:#64748B;--text-head:#F1F5F9;
+  --accent:#3B82F6;--accent-s:#1E3A5F;--accent2:#A78BFA;--accent2-s:#2D1B69;
+  --ok:#10B981;--ok-s:#064E3B;--warn:#F59E0B;--warn-s:#451A03;
+  --danger:#EF4444;--danger-s:#450A0A;--kafka:#F472B6;--kafka-s:#500724;
+  --redis:#F87171;--redis-s:#450A0A;--db:#22D3EE;--db-s:#083344;
+  color-scheme:dark;
+}
+*{box-sizing:border-box;}
+body{margin:0;font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text);display:flex;flex-direction:column;min-height:100%;}
+.hdr{background:var(--bg-surface);border-bottom:1px solid var(--border);padding:.6rem max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));position:sticky;top:env(safe-area-inset-top,0px);z-index:100;}
+.hdr-inner{display:flex;align-items:center;gap:.75rem;max-width:1400px;margin:0 auto;}
+.logo{font-family:'Space Grotesk',sans-serif;font-size:1rem;font-weight:700;color:var(--accent);flex-shrink:0;}
+.logo span{color:var(--text);font-weight:500;}
+.tabs{display:flex;overflow-x:auto;scrollbar-width:none;flex:1;}
+.tabs::-webkit-scrollbar{display:none;}
+.tab{padding:.35rem .8rem;font-size:.78rem;font-weight:500;color:var(--text-muted);border:none;background:none;cursor:pointer;border-radius:5px;white-space:nowrap;font-family:'Inter',sans-serif;transition:all .12s;}
+.tab:hover{color:var(--text);background:var(--bg-card);}
+.tab.on{color:var(--accent);background:var(--accent-s);font-weight:600;}
+.btn-theme{margin-left:auto;flex-shrink:0;padding:.3rem .65rem;font-size:.72rem;border:1px solid var(--border);background:var(--bg-card);color:var(--text-muted);border-radius:5px;cursor:pointer;font-family:'Inter',sans-serif;}
+main{flex:1;padding:1.25rem max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:1.25rem;max-width:1400px;margin:0 auto;width:100%;}
+.panel{display:none;}.panel.on{display:block;}
+.ph{font-family:'Space Grotesk',sans-serif;font-size:1.25rem;font-weight:700;color:var(--text-head);margin:0 0 .2rem;text-wrap:balance;}
+.pd{color:var(--text-muted);font-size:.82rem;margin:0 0 1.25rem;}
+.dlabel{font-family:'JetBrains Mono',monospace;font-size:.62rem;font-weight:500;letter-spacing:.08em;text-transform:uppercase;color:var(--text-muted);margin-bottom:.65rem;display:flex;align-items:center;gap:.5rem;}
+.dlabel::after{content:'';flex:1;height:1px;background:var(--border);}
+.dsec{margin-bottom:1.75rem;}
+.tgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:.85rem;}
+.tc{background:var(--bg-surface);border:1px solid var(--border);border-radius:9px;overflow:hidden;}
+.tc-hdr{padding:.55rem .85rem;display:flex;align-items:center;gap:.5rem;border-bottom:1px solid var(--border);}
+.tn{font-family:'JetBrains Mono',monospace;font-size:.78rem;font-weight:500;color:var(--text-head);}
+.tbadge{font-size:.58rem;font-weight:600;letter-spacing:.04em;padding:.12rem .38rem;border-radius:3px;margin-left:auto;}
+.be{background:var(--accent-s);color:var(--accent);}.bj{background:var(--accent2-s);color:var(--accent2);}
+.tfields{padding:.4rem 0;}
+.fr{display:flex;align-items:center;gap:.45rem;padding:.18rem .85rem;font-size:.72rem;min-width:0;}
+.fr:hover{background:var(--bg-card);}
+.fi{width:14px;flex-shrink:0;text-align:center;font-size:.7rem;}
+.fpk{color:var(--warn);}.ffk{color:var(--accent2);}.fmuted{color:var(--text-muted);}
+.fn{font-family:'JetBrains Mono',monospace;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.fn.pk{color:var(--warn);}.fn.fk{color:var(--accent2);}
+.ft{font-family:'JetBrains Mono',monospace;color:var(--text-muted);font-size:.62rem;flex-shrink:0;}
+.rtags{display:flex;flex-wrap:wrap;gap:.35rem;padding:.45rem .85rem;border-top:1px solid var(--border);}
+.rt{font-size:.6rem;padding:.12rem .4rem;border-radius:8px;background:var(--bg-card);color:var(--text-muted);font-family:'JetBrains Mono',monospace;white-space:nowrap;}
+.arch-wrap{background:var(--bg-surface);border:1px solid var(--border);border-radius:9px;padding:1.25rem;overflow-x:auto;}
+.arch-svg{width:100%;min-width:720px;display:block;}
+.flow-grid{display:grid;grid-template-columns:1fr 1fr;gap:1.25rem;}
+@media(max-width:680px){.flow-grid{grid-template-columns:1fr;}.tgrid{grid-template-columns:1fr;}}
+.fc{background:var(--bg-surface);border:1px solid var(--border);border-radius:9px;overflow:hidden;}
+.fc-title{font-family:'Space Grotesk',sans-serif;font-size:.82rem;font-weight:600;padding:.65rem .9rem;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:.45rem;}
+.fc-body{padding:.9rem;}
+.steps{display:flex;flex-direction:column;gap:.45rem;}
+.step{display:flex;gap:.65rem;align-items:flex-start;}
+.snum{width:18px;height:18px;border-radius:50%;background:var(--accent-s);color:var(--accent);font-size:.6rem;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px;font-family:'JetBrains Mono',monospace;}
+.scontent{font-size:.75rem;line-height:1.5;min-width:0;}
+.stitle{font-weight:600;color:var(--text-head);}
+.sdetail{color:var(--text-muted);font-size:.7rem;margin-top:.08rem;}
+.topics-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:.85rem;}
+.tkcard{background:var(--bg-surface);border:1px solid var(--border);border-radius:9px;overflow:hidden;}
+.tk-hdr{padding:.55rem .85rem;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
+.tkname{font-family:'JetBrains Mono',monospace;font-size:.78rem;font-weight:500;color:var(--kafka);}
+.tkpart{font-size:.62rem;color:var(--text-muted);font-family:'JetBrains Mono',monospace;}
+.evlist{padding:.4rem 0;}
+.ev{display:flex;align-items:center;gap:.65rem;padding:.22rem .85rem;font-size:.72rem;}
+.ev:hover{background:var(--bg-card);}
+.edot{width:6px;height:6px;border-radius:50%;flex-shrink:0;}
+.ename{font-family:'JetBrains Mono',monospace;flex:1;color:var(--text);min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.eprod{font-size:.62rem;color:var(--text-muted);white-space:nowrap;}
+.redis-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:.85rem;}
+.rcard{background:var(--bg-surface);border:1px solid var(--border);border-radius:9px;padding:.9rem;}
+.rtitle{font-family:'Space Grotesk',sans-serif;font-size:.82rem;font-weight:600;color:var(--redis);margin-bottom:.6rem;display:flex;align-items:center;gap:.4rem;}
+.rpat{font-family:'JetBrains Mono',monospace;font-size:.68rem;background:var(--bg-code);color:var(--text-muted);padding:.6rem .7rem;border-radius:5px;margin-bottom:.6rem;line-height:1.6;}
+.rttl{font-size:.68rem;color:var(--text-muted);display:flex;gap:.5rem;flex-wrap:wrap;}
+.rttl span{background:var(--redis-s);color:var(--redis);padding:.1rem .38rem;border-radius:3px;font-family:'JetBrains Mono',monospace;font-size:.62rem;}
+.api-sec{margin-bottom:1.5rem;}
+.api-tbl{width:100%;border-collapse:collapse;font-size:.76rem;display:block;overflow-x:auto;}
+.api-tbl th{text-align:left;padding:.45rem .7rem;font-weight:600;font-size:.62rem;letter-spacing:.05em;text-transform:uppercase;color:var(--text-muted);background:var(--bg-card);border-bottom:1px solid var(--border);}
+.api-tbl td{padding:.38rem .7rem;border-bottom:1px solid var(--border);vertical-align:top;}
+.api-tbl tr:last-child td{border-bottom:none;}
+.api-tbl table{display:table;width:100%;}
+.mth{font-family:'JetBrains Mono',monospace;font-size:.62rem;font-weight:700;padding:.12rem .38rem;border-radius:3px;display:inline-block;}
+.mget{background:var(--ok-s);color:var(--ok);}.mpost{background:var(--accent-s);color:var(--accent);}
+.mput{background:var(--warn-s);color:var(--warn);}.mdel{background:var(--danger-s);color:var(--danger);}
+.apath{font-family:'JetBrains Mono',monospace;font-size:.7rem;color:var(--text);}
+.abadge{font-size:.58rem;padding:.1rem .32rem;border-radius:3px;font-weight:500;}
+.apub{background:var(--ok-s);color:var(--ok);}.ausr{background:var(--accent-s);color:var(--accent);}.aadm{background:var(--danger-s);color:var(--danger);}
+.chip-row{display:flex;flex-wrap:wrap;gap:.4rem;margin-bottom:.85rem;}
+.chip{font-size:.7rem;padding:.22rem .6rem;border-radius:16px;border:1px solid var(--border);background:var(--bg-surface);color:var(--text-muted);font-family:'JetBrains Mono',monospace;}
+pre{margin:0;line-height:1.6;overflow-x:auto;}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:101;background:var(--bg-surface);}
+.fi{width:auto;min-width:24px;font-size:.56rem;font-weight:600;letter-spacing:.03em;text-align:left;font-family:'JetBrains Mono',monospace;}
+.bl{background:var(--ok-s);color:var(--ok);}
+.bp{background:var(--bg-card);color:var(--text-muted);border:1px solid var(--border);}
+.st{display:inline-block;font-family:'JetBrains Mono',monospace;font-size:.58rem;font-weight:600;letter-spacing:.04em;padding:.12rem .4rem;border-radius:3px;white-space:nowrap;}
+.st-live,.st-ok{background:var(--ok-s);color:var(--ok);}
+.st-plan,.st-p3{background:var(--bg-card);color:var(--text-muted);border:1px solid var(--border);}
+.st-p0{background:var(--danger-s);color:var(--danger);}
+.st-p1{background:var(--warn-s);color:var(--warn);}
+.st-p2{background:var(--accent-s);color:var(--accent);}
+.tab:focus-visible,.btn-theme:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
+.panel.on{animation:panelIn .28s ease-out;}
+@keyframes panelIn{from{opacity:0;transform:translateY(4px);}to{opacity:1;transform:none;}}
+@media (prefers-reduced-motion: reduce){*,*::before,*::after{animation:none!important;transition:none!important;}}
+.tbl-wrap{overflow-x:auto;border:1px solid var(--border);border-radius:8px;background:var(--bg-surface);margin-bottom:1.25rem;}
+.tbl{width:100%;border-collapse:collapse;font-size:.74rem;}
+.tbl th{text-align:left;padding:.45rem .7rem;font-size:.6rem;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--text-muted);background:var(--bg-card);border-bottom:1px solid var(--border);white-space:nowrap;}
+.tbl td{padding:.42rem .7rem;border-bottom:1px solid var(--border);vertical-align:top;line-height:1.45;}
+.tbl tr:last-child td{border-bottom:none;}
+.tbl .m{font-family:'JetBrains Mono',monospace;font-size:.68rem;color:var(--text-head);}
+.journey{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:.85rem;margin-bottom:1.5rem;}
+.jcard{background:var(--bg-surface);border:1px solid var(--border);border-radius:9px;padding:.8rem .9rem;display:flex;flex-direction:column;gap:.5rem;min-width:0;}
+.jhead{display:flex;align-items:center;gap:.55rem;}
+.jn{width:22px;height:22px;border-radius:50%;background:var(--accent);color:var(--bg);font-size:.66rem;font-weight:700;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;flex-shrink:0;}
+.jname{font-family:'Space Grotesk',sans-serif;font-size:.88rem;font-weight:600;color:var(--text-head);}
+.jrow{display:grid;grid-template-columns:64px 1fr;gap:.45rem;font-size:.72rem;line-height:1.5;}
+.jk{font-family:'JetBrains Mono',monospace;font-size:.58rem;letter-spacing:.06em;text-transform:uppercase;color:var(--text-muted);padding-top:.15rem;}
+.jbud{margin-top:auto;align-self:flex-start;font-family:'JetBrains Mono',monospace;font-size:.62rem;color:var(--ok);background:var(--ok-s);padding:.22rem .45rem;border-radius:4px;}
+.rules{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:.6rem;margin-bottom:1.5rem;}
+.rule{background:var(--bg-surface);border:1px solid var(--border);border-radius:8px;padding:.7rem .8rem;font-size:.74rem;line-height:1.5;color:var(--text);}
+.rule b{display:block;color:var(--text-head);font-size:.78rem;margin-bottom:.2rem;}
+.layers{display:flex;flex-direction:column;gap:.5rem;margin-bottom:1rem;}
+.layer{display:grid;grid-template-columns:170px 1fr;gap:.75rem;padding:.6rem .8rem;background:var(--bg-surface);border:1px solid var(--border);border-radius:8px;min-width:0;}
+.lname{font-family:'Space Grotesk',sans-serif;font-size:.8rem;font-weight:600;color:var(--text-head);}
+.lnote{font-size:.68rem;color:var(--text-muted);margin-top:.12rem;line-height:1.45;}
+.chips{display:flex;flex-wrap:wrap;gap:.35rem;align-content:flex-start;min-width:0;}
+.chips span{font-size:.64rem;font-family:'JetBrains Mono',monospace;padding:.15rem .45rem;border-radius:4px;background:var(--bg-card);color:var(--text);border:1px solid var(--border);}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:1.25rem;margin-bottom:1.5rem;}
+.sm-wrap{background:var(--bg-surface);border:1px solid var(--border);border-radius:9px;padding:1rem;overflow-x:auto;margin-bottom:1.5rem;}
+@media(max-width:680px){.grid2{grid-template-columns:1fr;}.layer{grid-template-columns:1fr;}}
+.tk-hdr{flex-wrap:wrap;gap:.25rem;}
+</style>
+
+<header class="hdr">
+  <div class="hdr-inner">
+    <div class="logo">sb<span>-ecom</span></div>
+    <nav class="tabs" role="tablist" aria-label="Sections">
+      <button class="tab on" onclick="sw('schema',this)">DB Schema</button>
+      <button class="tab" onclick="sw('arch',this)">Architecture</button>
+      <button class="tab" onclick="sw('journey',this)">Customer Journey</button>
+      <button class="tab" onclick="sw('order',this)">Order Engine</button>
+      <button class="tab" onclick="sw('engage',this)">Engagement</button>
+      <button class="tab" onclick="sw('auth',this)">Auth Flow</button>
+      <button class="tab" onclick="sw('kafka',this)">Kafka</button>
+      <button class="tab" onclick="sw('redis',this)">Redis</button>
+      <button class="tab" onclick="sw('perf',this)">Performance</button>
+      <button class="tab" onclick="sw('rel',this)">Reliability</button>
+      <button class="tab" onclick="sw('api',this)">API Ref</button>
+      <button class="tab" onclick="sw('audit',this)">Gap Audit</button>
+    </nav>
+    <button class="btn-theme" id="themeBtn" onclick="toggleTheme()">Theme: Auto</button>
+  </div>
+</header>
+
+<main>
+
+<!-- ═══════════════════ DB SCHEMA ═══════════════════ -->
+<div class="panel on" id="tab-schema">
+  <h1 class="ph">Database Schema</h1>
+  <p class="pd">Target PostgreSQL model: 15 tables in 3 domains, plus 9 v2 tables for inventory, outbox and engagement. Green = in code today. Grey = planned.</p>
+
+  <div class="dsec">
+    <div class="dlabel" style="color:var(--accent)">Users &amp; Auth</div>
+    <div class="tgrid">
+
+      <div class="tc">
+        <div class="tc-hdr" style="border-left:3px solid var(--accent)">
+          <div class="tn">users</div><div class="tbadge bp">planned</div>
+        </div>
+        <div class="tfields">
+          <div class="fr"><div class="fi fpk">PK</div><div class="fn pk">user_id</div><div class="ft">BIGSERIAL PK</div></div>
+          <div class="fr"><div class="fi fmuted">UQ</div><div class="fn">username</div><div class="ft">VARCHAR(50) UQ</div></div>
+          <div class="fr"><div class="fi fmuted">UQ</div><div class="fn">email</div><div class="ft">VARCHAR(100) UQ</div></div>
+          <div class="fr"><div class="fi fmuted">·</div><div class="fn">password_hash</div><div class="ft">VARCHAR(255)</div></div>
+          <div class="fr"><div class="fi fmuted">·</div><div class="fn">first_name</div><div class="ft">VARCHAR(50)</div></div>
+          <div class="fr"><div class="fi fmuted">·</div><div class="fn">last_name</div><div class="ft">VARCHAR(50)</div></div>
+          <div class="fr"><div class="fi fmuted">·</div><div class="fn">phone</div><div class="ft">VARCHAR(20)</div></div>
+          <div class="fr"><div class="fi fmuted">·</div><div class="fn">is_active</div><div class="ft">BOOLEAN</div></div>
+          <div class="fr"><div class="fi fmuted">·</div><div class="fn">email_verified</div><div class="ft">BOOLEAN</div></div>
+          <div class="fr"><div class="fi fmuted">·</div><div class="fn">created_at / updated_at</div><div class="ft">TIMESTAMP</div></div>
+        </div>
+      </div>
+
+      <div class="tc">
+        <div class="tc-hdr" style="border-left:3px solid var(--accent)">
+          <div class="tn">roles</div><div class="tbadge bp">planned</div>
+        </div>
+        <div class="tfields">
+          <div class="fr"><div class="fi fpk">PK</div><div class="fn pk">role_id</div><div class="ft">BIGSERIAL PK</div></div>
+          <div class="fr"><div class="fi fmuted">UQ</div><div class="fn">role_name</div><div class="ft">VARCHAR(30) UQ</div></div>
+        </div>
+        <div class="rtags"><span class="rt">ROLE_USER</span><span class="rt">ROLE_SELLER</span><span class="rt">ROLE_ADMIN</span></div>
+      </div>
+
+      <div class="tc">
+        <div class="tc-hdr" style="border-left:3px solid var(--accent2)">
+          <div class="tn">user_roles</div><div class="tbadge bj">junction</div>
+        </div>
+        <div class="tfields">
+          <div class="fr"><div class="fi ffk">FK</div><div class="fn fk">user_id</div><div class="ft">FK → users</div></div>
+          <div class="fr"><div class="fi ffk">FK</div><div class="fn fk">role_id</div><div class="ft">FK → roles</div></div>
+        </div>
+        <div class="rtags"><span class="rt">PK(user_id, role_id)</span></div>
+      </div>
+
+      <div class="tc">
+        <div class="tc-hdr" style="border-left:3px solid var(--accent)">
+          <div class="tn">addresses</div><div class="tbadge bp">planned</div>
+        </div>
+        <div class="tfields">
+          <div class="fr"><div class="fi fpk">PK</div><div class="fn pk">address_id</div><div class="ft">BIGSERIAL PK</div></div>
+          <div class="fr"><div class="fi ffk">FK</div><div class="fn fk">user_id</div><div class="ft">FK → users</div></div>
+          <div class="fr"><div class="fi fmuted">·</div><div class="fn">name</div><div class="ft">VARCHAR(100)</div></div>
+          <div class="fr"><div class="fi fmuted">·</div><div class="fn">street_line1</div><div class="ft">VARCHAR(200)</div></div>
+          <div class="fr"><div class="fi fmuted">·</div><div class="fn">city / state</div><div class="ft">VARCHAR(50)</div></div>
+          <div class="fr"><div class="fi fmuted">·</div><div class="fn">zip_code</div><div class="ft">VARCHAR(20)</div></div>
+          <div class="fr"><div class="fi fmuted">·</div><div class="fn">country</div><div class="ft">VARCHAR(50)</div></div>
+          <div class="fr"><div class="fi fmuted">·</div><div class="fn">is_default</div><div class="ft">BOOLEAN</div></div>
+        </div>
+      </div>
+
+      <div class="tc">
+        <div class="tc-hdr" style="border-left:3px solid var(--accent2)">
+          <div class="tn">refresh_tokens</div><div class="tbadge bp">planned</div>
+        </div>
+        <div class="tfields">
+          <div class="fr"><div class="fi fpk">PK</div><div class="fn pk">token_id</div><div class="ft">BIGSERIAL PK</div></div>
+          <div class="fr"><div class="fi ffk">FK</div><div class="fn fk">user_id</div><div class="ft">FK → users</div></div>
+          <div class="fr"><div class="fi fmuted">UQ</div><div class="fn">token_hash</div><div class="ft">CHAR(64) UQ</div></div>
+          <div class="fr"><div class="fi fmuted">·</div><div class="fn">family_id</div><div class="ft">UUID (reuse detection)</div></div>
+          <div class="fr"><div class="fi fmuted">·</div><div class="fn">expiry_date</div><div class="ft">TIMESTAMP</div></div>
+          <div class="fr"><div class="fi fmuted">·</div><div class="fn">is_revoked</div><div class="ft">BOOLEAN</div></div>
+          <div class="fr"><div class="fi fmuted">·</div><div class="fn">device_info</div><div class="ft">VARCHAR(255)</div></div>
+          <div class="fr"><div class="fi fmuted">·</div><div class="fn">ip_address</div><div class="ft">VARCHAR(45)</div></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="dsec">
+    <div class="dlabel" style="color:var(--ok)">Product Catalog</div>
+    <div class="tgrid">
+
+      <div class="tc">
+        <div class="tc-hdr" style="border-left:3px solid var(--ok)">
+          <div class="tn">categories</div><div class="tbadge bl">live</div>
+        </div>
+        <div class="tfields">
+          <div class="fr"><div class="fi fpk">PK</div><div class="fn pk">category_id</div><div class="ft">BIGSERIAL PK</div></div>
+          <div class="fr"><div class="fi fmuted">·</div><div class="fn">category_name</div><div class="ft">VARCHAR(100)</div></div>
+          <div class="fr"><div class="fi ffk">FK</div><div class="fn fk">parent_category_id</div><div class="ft">FK → categories</div></div>
+          <div class="fr"><div class="fi fmuted">UQ</div><div class="fn">slug</div><div class="ft">VARCHAR(120) UQ</div></div>
+          <div class="fr"><div class="fi fmuted">·</div><div class="fn">description</div><div class="ft">TEXT</div></div>
+          <div class="fr"><div class="fi fmuted">·</div><div class="fn">image_url</div><div class="ft">TEXT</div></div>
+          <div class="fr"><div class="fi fmuted">·</div><div class="fn">is_active</div><div class="ft">BOOLEAN</div></div>
+        </div>
+        <div class="rtags"><span class="rt">live: id, name</span><span class="rt">planned: slug, parent, is_active</span></div>
+      </div>
+
+      <div class="tc">
+        <div class="tc-hdr" style="border-left:3px solid var(--ok)">
+          <div class="tn">products</div><div class="tbadge bp">planned</div>
+        </div>
+        <div class="tfields">
+          <div class="fr"><div class="fi fpk">PK</div><div class="fn pk">product_id</div><div class="ft">BIGSERIAL PK</div></div>
+          <div class="fr"><div class="fi fmuted">·</div><div class="fn">product_name</div><div class="ft">VARCHAR(200)</div></div>
+          <div class="fr"><div class="fi fmuted">UQ</div><div class="fn">slug</div><div class="ft">VARCHAR(220) UQ</div></div>
+          <div class="fr"><div class="fi fmuted">·</div><div class="fn">description</div><div class="ft">TEXT</div></div>
+          <div class="fr"><div class="fi fmuted">·</div><div class="fn">price / special_price</div><div class="ft">NUMERIC(12,2)</div></div>
+          <div class="fr"><div class="fi fmuted">·</div><div class="fn">version</div><div class="ft">BIGINT (optimistic lock)</div></div>
+          <div class="fr"><div class="fi fmuted">·</div><div class="fn">image</div><div class="ft">TEXT</div></div>
+          <div class="fr"><div class="fi ffk">FK</div><div class="fn fk">category_id</div><div class="ft">FK → categories</div></div>
+          <div class="fr"><div class="fi ffk">FK</div><div class="fn fk">seller_id</div><div class="ft">FK → users</div></div>
+          <div class="fr"><div class="fi fmuted">·</div><div class="fn">is_active</div><div class="ft">BOOLEAN</div></div>
+          <div class="fr"><div class="fi fmuted">·</div><div class="fn">created_at / updated_at</div><div class="ft">TIMESTAMP</div></div>
+        </div>
+      </div>
+
+      <div class="tc">
+        <div class="tc-hdr" style="border-left:3px solid var(--ok)">
+          <div class="tn">product_images</div><div class="tbadge bp">planned</div>
+        </div>
+        <div class="tfields">
+          <div class="fr"><div class="fi fpk">PK</div><div class="fn pk">image_id</div><div class="ft">BIGSERIAL PK</div></div>
+          <div class="fr"><div class="fi ffk">FK</div><div class="fn fk">product_id</div><div class="ft">FK → products</div></div>
+          <div class="fr"><div class="fi fmuted">·</div><div class="fn">image_url</div><div class="ft">TEXT</div></div>
+          <div class="fr"><div class="fi fmuted">·</div><div class="fn">is_primary</div><div class="ft">BOOLEAN</div></div>
+          <div class="fr"><div class="fi fmuted">·</div><div class="fn">sort_order</div><div class="ft">INTEGER</div></div>
+        </div>
+      </div>
+
+      <div class="tc">
+        <div class="tc-hdr" style="border-left:3px solid var(--ok)">
+          <div class="tn">reviews</div><div class="tbadge bp">planned</div>
+        </div>
+        <div class="tfields">
+          <div class="fr"><div class="fi fpk">PK</div><div class="fn pk">review_id</div><div class="ft">BIGSERIAL PK</div></div>
+          <div class="fr"><div class="fi ffk">FK</div><div class="fn fk">user_id</div><div class="ft">FK → users</div></div>
+          <div class="fr"><div class="fi ffk">FK</div><div class="fn fk">product_id</div><div class="ft">FK → products</div></div>
+          <div class="fr"><div class="fi ffk">FK</div><div class="fn fk">order_item_id</div><div class="ft">FK → order_items</div></div>
+          <div class="fr"><div class="fi fmuted">·</div><div class="fn">rating</div><div class="ft">SMALLINT 1–5</div></div>
+          <div class="fr"><div class="fi fmuted">·</div><div class="fn">comment</div><div class="ft">TEXT</div></div>
+          <div class="fr"><div class="fi fmuted">·</div><div class="fn">is_verified</div><div class="ft">BOOLEAN</div></div>
+          <div class="fr"><div class="fi fmuted">·</div><div class="fn">created_at</div><div class="ft">TIMESTAMP</div></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="dsec">
+    <div class="dlabel" style="color:var(--warn)">Cart &amp; Orders</div>
+    <div class="tgrid">
+
+      <div class="tc">
+        <div class="tc-hdr" style="border-left:3px solid var(--warn)">
+          <div class="tn">carts</div><div class="tbadge bp">planned</div>
+        </div>
+        <div class="tfields">
+          <div class="fr"><div class="fi fpk">PK</div><div class="fn pk">cart_id</div><div class="ft">BIGSERIAL PK</div></div>
+          <div class="fr"><div class="fi ffk">FK</div><div class="fn fk">user_id</div><div class="ft">FK → users UQ</div></div>
+          <div class="fr"><div class="fi fmuted">·</div><div class="fn">total_price</div><div class="ft">NUMERIC(12,2)</div></div>
+          <div class="fr"><div class="fi fmuted">·</div><div class="fn">created_at / updated_at</div><div class="ft">TIMESTAMP</div></div>
+        </div>
+      </div>
+
+      <div class="tc">
+        <div class="tc-hdr" style="border-left:3px solid var(--warn)">
+          <div class="tn">cart_items</div><div class="tbadge bp">planned</div>
+        </div>
+        <div class="tfields">
+          <div class="fr"><div class="fi fpk">PK</div><div class="fn pk">cart_item_id</div><div class="ft">BIGSERIAL PK</div></div>
+          <div class="fr"><div class="fi ffk">FK</div><div class="fn fk">cart_id</div><div class="ft">FK → carts</div></div>
+          <div class="fr"><div class="fi ffk">FK</div><div class="fn fk">product_id</div><div class="ft">FK → products</div></div>
+          <div class="fr"><div class="fi fmuted">·</div><div class="fn">quantity</div><div class="ft">INTEGER</div></div>
+          <div class="fr"><div class="fi fmuted">·</div><div class="fn">discount</div><div class="ft">NUMERIC(12,2)</div></div>
+          <div class="fr"><div class="fi fmuted">·</div><div class="fn">product_price</div><div class="ft">NUMERIC(12,2)</div></div>
+        </div>
+        <div class="rtags"><span class="rt">UQ(cart_id, product_id)</span></div>
+      </div>
+
+      <div class="tc">
+        <div class="tc-hdr" style="border-left:3px solid var(--danger)">
+          <div class="tn">orders</div><div class="tbadge bp">planned</div>
+        </div>
+        <div class="tfields">
+          <div class="fr"><div class="fi fpk">PK</div><div class="fn pk">order_id</div><div class="ft">BIGSERIAL PK</div></div>
+          <div class="fr"><div class="fi ffk">FK</div><div class="fn fk">user_id</div><div class="ft">FK → users</div></div>
+          <div class="fr"><div class="fi ffk">FK</div><div class="fn fk">address_id</div><div class="ft">FK → addresses</div></div>
+          <div class="fr"><div class="fi fmuted">·</div><div class="fn">ship_to_snapshot</div><div class="ft">JSONB (copied at order time)</div></div>
+          <div class="fr"><div class="fi ffk">FK</div><div class="fn fk">coupon_id</div><div class="ft">FK → coupons</div></div>
+          <div class="fr"><div class="fi fmuted">·</div><div class="fn">total_amount</div><div class="ft">NUMERIC(12,2)</div></div>
+          <div class="fr"><div class="fi fmuted">·</div><div class="fn">discount_amount</div><div class="ft">NUMERIC(12,2)</div></div>
+          <div class="fr"><div class="fi fmuted">·</div><div class="fn">tax_amount</div><div class="ft">NUMERIC(12,2)</div></div>
+          <div class="fr"><div class="fi fmuted">·</div><div class="fn">final_amount</div><div class="ft">NUMERIC(12,2)</div></div>
+          <div class="fr"><div class="fi fmuted">·</div><div class="fn">order_status</div><div class="ft">VARCHAR(30) enum + CHECK</div></div>
+          <div class="fr"><div class="fi fmuted">·</div><div class="fn">created_at / updated_at</div><div class="ft">TIMESTAMP</div></div>
+        </div>
+        <div class="rtags"><span class="rt">PENDING</span><span class="rt">CONFIRMED</span><span class="rt">SHIPPED</span><span class="rt">DELIVERED</span><span class="rt">CANCELLED</span></div>
+      </div>
+
+      <div class="tc">
+        <div class="tc-hdr" style="border-left:3px solid var(--danger)">
+          <div class="tn">order_items</div><div class="tbadge bp">planned</div>
+        </div>
+        <div class="tfields">
+          <div class="fr"><div class="fi fpk">PK</div><div class="fn pk">order_item_id</div><div class="ft">BIGSERIAL PK</div></div>
+          <div class="fr"><div class="fi ffk">FK</div><div class="fn fk">order_id</div><div class="ft">FK → orders</div></div>
+          <div class="fr"><div class="fi ffk">FK</div><div class="fn fk">product_id</div><div class="ft">FK → products</div></div>
+          <div class="fr"><div class="fi fmuted">·</div><div class="fn">quantity</div><div class="ft">INTEGER</div></div>
+          <div class="fr"><div class="fi fmuted">·</div><div class="fn">ordered_product_price</div><div class="ft">NUMERIC(12,2)</div></div>
+          <div class="fr"><div class="fi fmuted">·</div><div class="fn">discount</div><div class="ft">NUMERIC(12,2)</div></div>
+        </div>
+      </div>
+
+      <div class="tc">
+        <div class="tc-hdr" style="border-left:3px solid var(--danger)">
+          <div class="tn">payments</div><div class="tbadge bp">planned</div>
+        </div>
+        <div class="tfields">
+          <div class="fr"><div class="fi fpk">PK</div><div class="fn pk">payment_id</div><div class="ft">BIGSERIAL PK</div></div>
+          <div class="fr"><div class="fi ffk">FK</div><div class="fn fk">order_id</div><div class="ft">FK → orders UQ</div></div>
+          <div class="fr"><div class="fi fmuted">·</div><div class="fn">payment_method</div><div class="ft">VARCHAR(50)</div></div>
+          <div class="fr"><div class="fi fmuted">·</div><div class="fn">gateway_payment_id</div><div class="ft">VARCHAR(100) UQ (webhook dedupe)</div></div>
+          <div class="fr"><div class="fi fmuted">·</div><div class="fn">payment_status</div><div class="ft">VARCHAR(30)</div></div>
+          <div class="fr"><div class="fi fmuted">·</div><div class="fn">amount / currency</div><div class="ft">DECIMAL / CHAR(3)</div></div>
+          <div class="fr"><div class="fi fmuted">·</div><div class="fn">created_at</div><div class="ft">TIMESTAMP</div></div>
+        </div>
+        <div class="rtags"><span class="rt">RAZORPAY</span><span class="rt">STRIPE</span><span class="rt">COD</span><span class="rt">UPI</span></div>
+      </div>
+
+      <div class="tc">
+        <div class="tc-hdr" style="border-left:3px solid var(--accent2)">
+          <div class="tn">coupons</div><div class="tbadge bp">planned</div>
+        </div>
+        <div class="tfields">
+          <div class="fr"><div class="fi fpk">PK</div><div class="fn pk">coupon_id</div><div class="ft">BIGSERIAL PK</div></div>
+          <div class="fr"><div class="fi fmuted">UQ</div><div class="fn">coupon_code</div><div class="ft">VARCHAR(30) UQ</div></div>
+          <div class="fr"><div class="fi fmuted">·</div><div class="fn">discount_type</div><div class="ft">VARCHAR(20)</div></div>
+          <div class="fr"><div class="fi fmuted">·</div><div class="fn">discount_value</div><div class="ft">NUMERIC(12,2)</div></div>
+          <div class="fr"><div class="fi fmuted">·</div><div class="fn">min_order_amount</div><div class="ft">NUMERIC(12,2)</div></div>
+          <div class="fr"><div class="fi fmuted">·</div><div class="fn">max_uses / used_count</div><div class="ft">INTEGER</div></div>
+          <div class="fr"><div class="fi fmuted">·</div><div class="fn">expiry_date</div><div class="ft">TIMESTAMP</div></div>
+          <div class="fr"><div class="fi fmuted">·</div><div class="fn">is_active</div><div class="ft">BOOLEAN</div></div>
+        </div>
+        <div class="rtags"><span class="rt">PERCENTAGE</span><span class="rt">FLAT</span></div>
+      </div>
+
+    </div>
+  </div>
+  <div class="dsec">
+    <div class="dlabel" style="color:var(--accent2)">v2 · Inventory, reliability and engagement</div>
+    <div class="tgrid">
+
+      <div class="tc">
+        <div class="tc-hdr" style="border-left:3px solid var(--warn)"><div class="tn">inventory</div><div class="tbadge bp">v2 · planned</div></div>
+        <div class="tfields">
+          <div class="fr"><div class="fi fpk">PK</div><div class="fn pk">product_id</div><div class="ft">BIGINT FK → products</div></div>
+          <div class="fr"><div class="fi fmuted">·</div><div class="fn">on_hand</div><div class="ft">INTEGER ≥ 0</div></div>
+          <div class="fr"><div class="fi fmuted">·</div><div class="fn">reserved</div><div class="ft">INTEGER ≤ on_hand</div></div>
+          <div class="fr"><div class="fi fmuted">·</div><div class="fn">version</div><div class="ft">BIGINT (@Version)</div></div>
+          <div class="fr"><div class="fi fmuted">·</div><div class="fn">updated_at</div><div class="ft">TIMESTAMPTZ</div></div>
+        </div>
+        <div class="rtags"><span class="rt">stock lives here, not on products</span></div>
+      </div>
+
+      <div class="tc">
+        <div class="tc-hdr" style="border-left:3px solid var(--warn)"><div class="tn">inventory_reservations</div><div class="tbadge bp">v2 · planned</div></div>
+        <div class="tfields">
+          <div class="fr"><div class="fi fpk">PK</div><div class="fn pk">reservation_id</div><div class="ft">BIGSERIAL PK</div></div>
+          <div class="fr"><div class="fi ffk">FK</div><div class="fn fk">order_id</div><div class="ft">FK → orders</div></div>
+          <div class="fr"><div class="fi ffk">FK</div><div class="fn fk">product_id</div><div class="ft">FK → products</div></div>
+          <div class="fr"><div class="fi fmuted">·</div><div class="fn">quantity</div><div class="ft">INTEGER &gt; 0</div></div>
+          <div class="fr"><div class="fi fmuted">·</div><div class="fn">status</div><div class="ft">HELD / COMMITTED / RELEASED</div></div>
+          <div class="fr"><div class="fi fmuted">·</div><div class="fn">expires_at</div><div class="ft">TIMESTAMPTZ (now + 10 min)</div></div>
+        </div>
+        <div class="rtags"><span class="rt">sweeper releases expired holds</span></div>
+      </div>
+
+      <div class="tc">
+        <div class="tc-hdr" style="border-left:3px solid var(--danger)"><div class="tn">order_status_history</div><div class="tbadge bp">v2 · planned</div></div>
+        <div class="tfields">
+          <div class="fr"><div class="fi fpk">PK</div><div class="fn pk">history_id</div><div class="ft">BIGSERIAL PK</div></div>
+          <div class="fr"><div class="fi ffk">FK</div><div class="fn fk">order_id</div><div class="ft">FK → orders</div></div>
+          <div class="fr"><div class="fi fmuted">·</div><div class="fn">from_status / to_status</div><div class="ft">VARCHAR(30)</div></div>
+          <div class="fr"><div class="fi fmuted">·</div><div class="fn">actor</div><div class="ft">VARCHAR(50) user / admin / system / gateway</div></div>
+          <div class="fr"><div class="fi fmuted">·</div><div class="fn">reason</div><div class="ft">TEXT</div></div>
+          <div class="fr"><div class="fi fmuted">·</div><div class="fn">created_at</div><div class="ft">TIMESTAMPTZ</div></div>
+        </div>
+        <div class="rtags"><span class="rt">append-only audit trail</span></div>
+      </div>
+
+      <div class="tc">
+        <div class="tc-hdr" style="border-left:3px solid var(--kafka)"><div class="tn">outbox_events</div><div class="tbadge bp">v2 · planned</div></div>
+        <div class="tfields">
+          <div class="fr"><div class="fi fpk">PK</div><div class="fn pk">event_id</div><div class="ft">UUID PK</div></div>
+          <div class="fr"><div class="fi fmuted">·</div><div class="fn">aggregate_type / _id</div><div class="ft">VARCHAR(50) / VARCHAR(64)</div></div>
+          <div class="fr"><div class="fi fmuted">·</div><div class="fn">event_type</div><div class="ft">VARCHAR(80)</div></div>
+          <div class="fr"><div class="fi fmuted">·</div><div class="fn">payload</div><div class="ft">JSONB</div></div>
+          <div class="fr"><div class="fi fmuted">·</div><div class="fn">created_at / published_at</div><div class="ft">TIMESTAMPTZ (NULL until sent)</div></div>
+        </div>
+        <div class="rtags"><span class="rt">written in the same transaction as the order</span></div>
+      </div>
+
+      <div class="tc">
+        <div class="tc-hdr" style="border-left:3px solid var(--kafka)"><div class="tn">processed_events</div><div class="tbadge bp">v2 · planned</div></div>
+        <div class="tfields">
+          <div class="fr"><div class="fi fpk">PK</div><div class="fn pk">consumer_group + event_id</div><div class="ft">VARCHAR(80) + UUID</div></div>
+          <div class="fr"><div class="fi fmuted">·</div><div class="fn">processed_at</div><div class="ft">TIMESTAMPTZ</div></div>
+        </div>
+        <div class="rtags"><span class="rt">consumer-side dedupe</span></div>
+      </div>
+
+      <div class="tc">
+        <div class="tc-hdr" style="border-left:3px solid var(--accent2)"><div class="tn">idempotency_keys</div><div class="tbadge bp">v2 · planned</div></div>
+        <div class="tfields">
+          <div class="fr"><div class="fi fpk">PK</div><div class="fn pk">user_id + key</div><div class="ft">BIGINT + VARCHAR(64) UQ</div></div>
+          <div class="fr"><div class="fi fmuted">·</div><div class="fn">request_hash</div><div class="ft">CHAR(64)</div></div>
+          <div class="fr"><div class="fi fmuted">·</div><div class="fn">response_status / body</div><div class="ft">SMALLINT / JSONB</div></div>
+          <div class="fr"><div class="fi fmuted">·</div><div class="fn">expires_at</div><div class="ft">TIMESTAMPTZ (24 h)</div></div>
+        </div>
+        <div class="rtags"><span class="rt">same key + different body → 422</span></div>
+      </div>
+
+      <div class="tc">
+        <div class="tc-hdr" style="border-left:3px solid var(--ok)"><div class="tn">wishlists</div><div class="tbadge bp">v2 · planned</div></div>
+        <div class="tfields">
+          <div class="fr"><div class="fi fpk">PK</div><div class="fn pk">user_id + product_id</div><div class="ft">BIGINT FK + BIGINT FK</div></div>
+          <div class="fr"><div class="fi fmuted">·</div><div class="fn">created_at</div><div class="ft">TIMESTAMPTZ</div></div>
+        </div>
+        <div class="rtags"><span class="rt">drives price-drop alerts</span></div>
+      </div>
+
+      <div class="tc">
+        <div class="tc-hdr" style="border-left:3px solid var(--ok)"><div class="tn">stock_alerts</div><div class="tbadge bp">v2 · planned</div></div>
+        <div class="tfields">
+          <div class="fr"><div class="fi fpk">PK</div><div class="fn pk">user_id + product_id</div><div class="ft">BIGINT FK + BIGINT FK</div></div>
+          <div class="fr"><div class="fi fmuted">·</div><div class="fn">notified_at</div><div class="ft">TIMESTAMPTZ NULL</div></div>
+        </div>
+        <div class="rtags"><span class="rt">one alert per restock</span></div>
+      </div>
+
+      <div class="tc">
+        <div class="tc-hdr" style="border-left:3px solid var(--ok)"><div class="tn">loyalty_ledger</div><div class="tbadge bp">v2 · planned</div></div>
+        <div class="tfields">
+          <div class="fr"><div class="fi fpk">PK</div><div class="fn pk">entry_id</div><div class="ft">BIGSERIAL PK</div></div>
+          <div class="fr"><div class="fi ffk">FK</div><div class="fn fk">user_id / order_id</div><div class="ft">FK → users / orders (nullable)</div></div>
+          <div class="fr"><div class="fi fmuted">·</div><div class="fn">points</div><div class="ft">INTEGER (+ earn, − redeem)</div></div>
+          <div class="fr"><div class="fi fmuted">·</div><div class="fn">reason / created_at</div><div class="ft">VARCHAR(40) / TIMESTAMPTZ</div></div>
+        </div>
+        <div class="rtags"><span class="rt">append-only; balance cached in Redis</span></div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════ ARCHITECTURE ═══════════════════ -->
+<div class="panel" id="tab-arch">
+  <h1 class="ph">System Architecture</h1>
+  <p class="pd">Target design. Today the repo is one Spring Boot 4 app. The service boxes show where modules can split out once their Kafka contracts are stable.</p>
+
+  <div class="arch-wrap">
+    <svg class="arch-svg" viewBox="0 0 920 640" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <marker id="arr" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto">
+          <polygon points="0 0,7 2.5,0 5" fill="#64748B"/>
+        </marker>
+        <marker id="arr-blue" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto">
+          <polygon points="0 0,7 2.5,0 5" fill="#3B82F6"/>
+        </marker>
+        <marker id="arr-green" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto">
+          <polygon points="0 0,7 2.5,0 5" fill="#10B981"/>
+        </marker>
+        <marker id="arr-pink" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto">
+          <polygon points="0 0,7 2.5,0 5" fill="#E879F9"/>
+        </marker>
+        <marker id="arr-red" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto">
+          <polygon points="0 0,7 2.5,0 5" fill="#F87171"/>
+        </marker>
+      </defs>
+
+      <!-- Zone backgrounds -->
+      <rect x="12" y="10" width="155" height="620" rx="8" fill="none" stroke="#3B82F6" stroke-width="1" stroke-dasharray="4 3" opacity=".25"/>
+      <text x="90" y="27" text-anchor="middle" font-size="9" fill="#3B82F6" font-family="monospace" opacity=".6">CLIENT</text>
+
+      <rect x="180" y="10" width="545" height="620" rx="8" fill="none" stroke="#8B5CF6" stroke-width="1" stroke-dasharray="4 3" opacity=".25"/>
+      <text x="452" y="27" text-anchor="middle" font-size="9" fill="#8B5CF6" font-family="monospace" opacity=".6">SPRING BOOT · MODULAR MONOLITH</text>
+
+      <rect x="740" y="10" width="168" height="620" rx="8" fill="none" stroke="#10B981" stroke-width="1" stroke-dasharray="4 3" opacity=".25"/>
+      <text x="824" y="27" text-anchor="middle" font-size="9" fill="#10B981" font-family="monospace" opacity=".6">DATA LAYER</text>
+
+      <!-- CLIENT boxes -->
+      <rect x="22" y="70" width="135" height="42" rx="6" fill="#1E3A5F" stroke="#3B82F6" stroke-width="1.5"/>
+      <text x="90" y="88" text-anchor="middle" font-size="11" fill="#93C5FD" font-family="monospace" font-weight="600">Web App</text>
+      <text x="90" y="103" text-anchor="middle" font-size="9" fill="#CBD5E1" font-family="monospace">React / Next.js</text>
+
+      <rect x="22" y="128" width="135" height="42" rx="6" fill="#1E3A5F" stroke="#3B82F6" stroke-width="1.5"/>
+      <text x="90" y="146" text-anchor="middle" font-size="11" fill="#93C5FD" font-family="monospace" font-weight="600">Mobile App</text>
+      <text x="90" y="161" text-anchor="middle" font-size="9" fill="#CBD5E1" font-family="monospace">React Native</text>
+
+      <!-- API Gateway -->
+      <rect x="192" y="55" width="155" height="52" rx="6" fill="#2D1B69" stroke="#8B5CF6" stroke-width="1.5"/>
+      <text x="270" y="76" text-anchor="middle" font-size="11" fill="#C4B5FD" font-family="monospace" font-weight="600">API Gateway</text>
+      <text x="270" y="91" text-anchor="middle" font-size="9" fill="#CBD5E1" font-family="monospace">Rate Limit · CORS</text>
+      <text x="270" y="104" text-anchor="middle" font-size="9" fill="#CBD5E1" font-family="monospace">JWT Filter · LB</text>
+
+      <!-- Auth Service -->
+      <rect x="192" y="140" width="155" height="52" rx="6" fill="#2D1B69" stroke="#A78BFA" stroke-width="1.5"/>
+      <text x="270" y="161" text-anchor="middle" font-size="11" fill="#C4B5FD" font-family="monospace" font-weight="600">Auth Service</text>
+      <text x="270" y="176" text-anchor="middle" font-size="9" fill="#CBD5E1" font-family="monospace">JWT · OAuth2 · BCrypt</text>
+      <text x="270" y="189" text-anchor="middle" font-size="9" fill="#CBD5E1" font-family="monospace">Spring Security 6</text>
+
+      <!-- Product Service -->
+      <rect x="372" y="140" width="145" height="52" rx="6" fill="#083344" stroke="#22D3EE" stroke-width="1.5"/>
+      <text x="445" y="161" text-anchor="middle" font-size="11" fill="#67E8F9" font-family="monospace" font-weight="600">Product Service</text>
+      <text x="445" y="176" text-anchor="middle" font-size="9" fill="#CBD5E1" font-family="monospace">Catalog · Search</text>
+      <text x="445" y="189" text-anchor="middle" font-size="9" fill="#CBD5E1" font-family="monospace">ModelMapper · DTO</text>
+
+      <!-- Order Service -->
+      <rect x="372" y="230" width="145" height="52" rx="6" fill="#083344" stroke="#22D3EE" stroke-width="1.5"/>
+      <text x="445" y="251" text-anchor="middle" font-size="11" fill="#67E8F9" font-family="monospace" font-weight="600">Order Service</text>
+      <text x="445" y="266" text-anchor="middle" font-size="9" fill="#CBD5E1" font-family="monospace">Cart · Checkout</text>
+      <text x="445" y="279" text-anchor="middle" font-size="9" fill="#CBD5E1" font-family="monospace">Payment · Coupon</text>
+
+      <!-- Notification Service -->
+      <rect x="192" y="230" width="155" height="52" rx="6" fill="#500724" stroke="#F472B6" stroke-width="1.5"/>
+      <text x="270" y="251" text-anchor="middle" font-size="11" fill="#F9A8D4" font-family="monospace" font-weight="600">Notification Svc</text>
+      <text x="270" y="266" text-anchor="middle" font-size="9" fill="#CBD5E1" font-family="monospace">Email · SMS · Push</text>
+      <text x="270" y="279" text-anchor="middle" font-size="9" fill="#CBD5E1" font-family="monospace">Kafka Consumer</text>
+
+      <!-- S3 / CDN -->
+      <rect x="537" y="140" width="145" height="52" rx="6" fill="#083344" stroke="#38BDF8" stroke-width="1.5"/>
+      <text x="610" y="161" text-anchor="middle" font-size="11" fill="#7DD3FC" font-family="monospace" font-weight="600">S3 / CDN</text>
+      <text x="610" y="176" text-anchor="middle" font-size="9" fill="#CBD5E1" font-family="monospace">Product Images</text>
+      <text x="610" y="189" text-anchor="middle" font-size="9" fill="#CBD5E1" font-family="monospace">CloudFront · MinIO</text>
+
+      <!-- Kafka -->
+      <rect x="192" y="360" width="330" height="52" rx="6" fill="#4A1942" stroke="#E879F9" stroke-width="1.5"/>
+      <text x="357" y="381" text-anchor="middle" font-size="11" fill="#E879F9" font-family="monospace" font-weight="600">Apache Kafka</text>
+      <text x="357" y="396" text-anchor="middle" font-size="9" fill="#A78BFA" font-family="monospace">order · payment · inventory · notification · user</text>
+      <text x="357" y="409" text-anchor="middle" font-size="9" fill="#CBD5E1" font-family="monospace">partitions:3  rf:3  min-isr:2  7d</text>
+
+      <!-- Redis -->
+      <rect x="192" y="455" width="155" height="52" rx="6" fill="#450A0A" stroke="#F87171" stroke-width="1.5"/>
+      <text x="270" y="476" text-anchor="middle" font-size="11" fill="#FCA5A5" font-family="monospace" font-weight="600">Redis Cache</text>
+      <text x="270" y="491" text-anchor="middle" font-size="9" fill="#CBD5E1" font-family="monospace">Sessions · Cart · OTP</text>
+      <text x="270" y="504" text-anchor="middle" font-size="9" fill="#CBD5E1" font-family="monospace">Rate Limit · Catalog</text>
+
+      <!-- Elasticsearch -->
+      <rect x="372" y="455" width="150" height="52" rx="6" fill="#451A03" stroke="#FB923C" stroke-width="1.5"/>
+      <text x="447" y="476" text-anchor="middle" font-size="11" fill="#FDBA74" font-family="monospace" font-weight="600">Elasticsearch</text>
+      <text x="447" y="491" text-anchor="middle" font-size="9" fill="#CBD5E1" font-family="monospace">Full-text Search</text>
+      <text x="447" y="504" text-anchor="middle" font-size="9" fill="#CBD5E1" font-family="monospace">Product Indexing</text>
+
+      <!-- PostgreSQL -->
+      <rect x="752" y="70" width="148" height="52" rx="6" fill="#064E3B" stroke="#10B981" stroke-width="1.5"/>
+      <text x="826" y="91" text-anchor="middle" font-size="11" fill="#6EE7B7" font-family="monospace" font-weight="600">PostgreSQL</text>
+      <text x="826" y="106" text-anchor="middle" font-size="9" fill="#CBD5E1" font-family="monospace">Primary + Read Replica</text>
+      <text x="826" y="119" text-anchor="middle" font-size="9" fill="#CBD5E1" font-family="monospace">JPA / Hibernate</text>
+
+      <!-- ZooKeeper -->
+      <rect x="752" y="360" width="148" height="52" rx="6" fill="#4A1942" stroke="#E879F9" stroke-width="1.5"/>
+      <text x="826" y="381" text-anchor="middle" font-size="11" fill="#E879F9" font-family="monospace" font-weight="600">KRaft Quorum</text>
+      <text x="826" y="396" text-anchor="middle" font-size="9" fill="#CBD5E1" font-family="monospace">No ZooKeeper (Kafka 4.x)</text>
+      <text x="826" y="409" text-anchor="middle" font-size="9" fill="#CBD5E1" font-family="monospace">Controller quorum</text>
+
+      <!-- Resilience4j label -->
+      <rect x="372" y="195" width="145" height="6" rx="3" fill="none" stroke="#F59E0B" stroke-width=".8" stroke-dasharray="3 2"/>
+      <text x="445" y="209" text-anchor="middle" font-size="7.5" fill="#F59E0B" font-family="monospace">⚡ Resilience4j Circuit Breaker</text>
+
+      <!-- Arrows -->
+      <!-- Clients → Gateway -->
+      <line x1="157" y1="91" x2="192" y2="81" stroke="#3B82F6" stroke-width="1.5" marker-end="url(#arr-blue)" opacity=".8"/>
+      <line x1="157" y1="149" x2="192" y2="165" stroke="#3B82F6" stroke-width="1.5" marker-end="url(#arr-blue)" opacity=".8"/>
+      <!-- Gateway → Auth -->
+      <line x1="270" y1="107" x2="270" y2="140" stroke="#A78BFA" stroke-width="1.5" marker-end="url(#arr)" opacity=".7"/>
+      <!-- Gateway → Product -->
+      <line x1="347" y1="82" x2="372" y2="155" stroke="#22D3EE" stroke-width="1.2" marker-end="url(#arr)" opacity=".6"/>
+      <!-- Gateway → Order -->
+      <line x1="347" y1="82" x2="420" y2="230" stroke="#22D3EE" stroke-width="1" stroke-dasharray="4 2" marker-end="url(#arr)" opacity=".4"/>
+      <!-- Product → S3 -->
+      <line x1="517" y1="166" x2="537" y2="166" stroke="#38BDF8" stroke-width="1.2" marker-end="url(#arr)" opacity=".7"/>
+      <!-- Services → Kafka -->
+      <line x1="300" y1="282" x2="300" y2="360" stroke="#E879F9" stroke-width="1.5" marker-end="url(#arr-pink)" opacity=".7"/>
+      <line x1="445" y1="282" x2="410" y2="360" stroke="#E879F9" stroke-width="1.5" marker-end="url(#arr-pink)" opacity=".7"/>
+      <!-- Kafka → Notification -->
+      <line x1="250" y1="360" x2="250" y2="282" stroke="#F472B6" stroke-width="1.5" marker-end="url(#arr)" opacity=".8"/>
+      <!-- Kafka → ZooKeeper -->
+      <line x1="522" y1="386" x2="752" y2="386" stroke="#E879F9" stroke-width="1.2" marker-end="url(#arr-pink)" opacity=".5"/>
+      <!-- Services → PostgreSQL -->
+      <line x1="682" y1="166" x2="752" y2="96" stroke="#10B981" stroke-width="1.5" marker-end="url(#arr-green)" opacity=".7"/>
+      <line x1="517" y1="256" x2="752" y2="120" stroke="#10B981" stroke-width="1.2" marker-end="url(#arr-green)" opacity=".6"/>
+      <!-- Services → Redis (dashed) -->
+      <line x1="270" y1="455" x2="270" y2="390" stroke="#F87171" stroke-width="1.2" stroke-dasharray="4 2" marker-end="url(#arr-red)" opacity=".7"/>
+      <!-- Product → ES (dashed) -->
+      <line x1="447" y1="455" x2="447" y2="390" stroke="#FB923C" stroke-width="1.2" stroke-dasharray="4 2" marker-end="url(#arr)" opacity=".7"/>
+      <!-- Auth → Redis (dashed, curved) -->
+      <path d="M 215 192 Q 180 325 215 455" stroke="#F87171" stroke-width="1" stroke-dasharray="3 3" fill="none" marker-end="url(#arr-red)" opacity=".5"/>
+
+      <!-- Legend -->
+      <rect x="192" y="565" width="530" height="58" rx="6" fill="#0F172A" opacity=".7"/>
+      <text x="210" y="582" font-size="9" fill="#CBD5E1" font-family="monospace" font-weight="600">LEGEND</text>
+      <line x1="265" y1="579" x2="290" y2="579" stroke="#3B82F6" stroke-width="1.5" marker-end="url(#arr-blue)"/>
+      <text x="295" y="582" font-size="8.5" fill="#94A3B8" font-family="monospace">HTTP/REST</text>
+      <line x1="355" y1="579" x2="380" y2="579" stroke="#E879F9" stroke-width="1.5" marker-end="url(#arr-pink)"/>
+      <text x="385" y="582" font-size="8.5" fill="#94A3B8" font-family="monospace">Kafka Events</text>
+      <line x1="450" y1="579" x2="475" y2="579" stroke="#F87171" stroke-width="1" stroke-dasharray="4 2" marker-end="url(#arr-red)"/>
+      <text x="480" y="582" font-size="8.5" fill="#94A3B8" font-family="monospace">Cache Ops</text>
+      <line x1="540" y1="579" x2="565" y2="579" stroke="#10B981" stroke-width="1.5" marker-end="url(#arr-green)"/>
+      <text x="570" y="582" font-size="8.5" fill="#94A3B8" font-family="monospace">DB Read/Write</text>
+      <line x1="265" y1="601" x2="290" y2="601" stroke="#FB923C" stroke-width="1" stroke-dasharray="4 2" marker-end="url(#arr)"/>
+      <text x="295" y="604" font-size="8.5" fill="#94A3B8" font-family="monospace">Search Index</text>
+      <line x1="355" y1="601" x2="380" y2="601" stroke="#38BDF8" stroke-width="1.2" marker-end="url(#arr)"/>
+      <text x="385" y="604" font-size="8.5" fill="#94A3B8" font-family="monospace">File / CDN</text>
+    </svg>
+  </div>
+
+  <div style="margin-top:1.25rem">
+    <div class="dlabel">Layers · what each tier does</div>
+    <div class="layers">
+      <div class="layer"><div><div class="lname">1 · Edge</div><div class="lnote">Absorbs traffic spikes and bots before they reach the app.</div></div><div class="chips"><span>CDN + image transforms</span><span>WAF</span><span>Bot checks: login, checkout</span><span>HTTP/2 + Brotli</span></div></div>
+      <div class="layer"><div><div class="lname">2 · Gateway &amp; identity</div><div class="lnote">One place for routing, token checks and rate limits.</div></div><div class="chips"><span>Stateless JWT verify</span><span>Token-bucket limits</span><span>OAuth2 one-time code</span><span>RBAC + TOTP (admin, seller)</span></div></div>
+      <div class="layer"><div><div class="lname">3 · Modules</div><div class="lnote">Catalog, cart, order, payment, notification, user. Each owns its tables and talks through interfaces or events.</div></div><div class="chips"><span>Spring Boot 4.1.2</span><span>ArchUnit boundary tests</span><span>MapStruct on hot paths</span><span>RFC 9457 Problem Details</span></div></div>
+      <div class="layer"><div><div class="lname">4 · Async events</div><div class="lnote">State changes leave through an outbox, so the database and Kafka never disagree.</div></div><div class="chips"><span>Kafka 4.x KRaft · RF 3</span><span>min.insync.replicas = 2</span><span>Outbox relay</span><span>Idempotent consumers</span><span>.DLT topics</span></div></div>
+      <div class="layer"><div><div class="lname">5 · Caching</div><div class="lnote">Four tiers, each with its own TTL and invalidation rule.</div></div><div class="chips"><span>CDN + ETag</span><span>Caffeine (in-process)</span><span>Redis 7</span><span>Single-flight locks</span></div></div>
+      <div class="layer"><div><div class="lname">6 · Search &amp; read models</div><div class="lnote">Shoppers search an index built from events. The primary database serves writes.</div></div><div class="chips"><span>Elasticsearch 8+ alias</span><span>Co-purchase ZSETs</span><span>Analytics to S3 (Parquet)</span></div></div>
+      <div class="layer"><div><div class="lname">7 · Data</div><div class="lnote">Primary for writes, replica for listings and reports.</div></div><div class="chips"><span>PostgreSQL 16+ primary</span><span>Read replica</span><span>Flyway migrations</span><span>Orders partitioned by month</span><span>S3 for images</span></div></div>
+      <div class="layer"><div><div class="lname">8 · Real-time</div><div class="lnote">Order status reaches the screen without a refresh. A reconnect fetches the latest state, so no update is lost.</div></div><div class="chips"><span>SSE order stream</span><span>Redis pub/sub fan-out</span><span>Last state cached per order</span></div></div>
+      <div class="layer"><div><div class="lname">9 · Observability</div><div class="lnote">Every request and event carries one trace ID, from browser to consumer.</div></div><div class="chips"><span>OpenTelemetry</span><span>Prometheus + Grafana</span><span>JSON logs with traceId</span><span>SLO burn alerts</span></div></div>
+      <div class="layer"><div><div class="lname">10 · Secrets &amp; flags</div><div class="lnote">No credentials in source. New checkout logic ships dark, then ramps 5 → 50 → 100%.</div></div><div class="chips"><span>Vault or K8s secrets</span><span>OpenFeature flags</span><span>Canary ingress rules</span></div></div>
+    </div>
+  </div>
+  <div style="margin-top:1.25rem">
+    <div class="dlabel">Tech Stack</div>
+    <div class="chip-row">
+      <span class="chip">Spring Boot 4.1.2</span><span class="chip">Spring Security 7 · planned</span><span class="chip">Spring Data JPA</span>
+      <span class="chip">PostgreSQL 16+</span><span class="chip">Redis 7 · planned</span><span class="chip">Kafka 4.x KRaft · planned</span>
+      <span class="chip">Elasticsearch 8+ · planned</span><span class="chip">ModelMapper 3.2.4</span><span class="chip">Lombok</span>
+      <span class="chip">jjwt · planned</span><span class="chip">Resilience4j · planned</span><span class="chip">Flyway · planned</span>
+      <span class="chip">Docker + K8s · planned</span><span class="chip">S3 / MinIO · planned</span>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════ AUTH ═══════════════════ -->
+<div class="panel" id="tab-auth">
+  <h1 class="ph">Authentication &amp; Authorization</h1>
+  <p class="pd">JWT lifecycle, OAuth2 social login, token rotation, and RBAC</p>
+
+  <div class="flow-grid">
+    <div class="fc">
+      <div class="fc-title" style="color:var(--accent2)">JWT Login Flow</div>
+      <div class="fc-body"><div class="steps">
+        <div class="step"><div class="snum">1</div><div class="scontent"><div class="stitle">POST /api/auth/login</div><div class="sdetail">Client sends { email, password }</div></div></div>
+        <div class="step"><div class="snum">2</div><div class="scontent"><div class="stitle">AuthenticationManager</div><div class="sdetail">Spring Security validates via UsernamePasswordAuthToken</div></div></div>
+        <div class="step"><div class="snum">3</div><div class="scontent"><div class="stitle">UserDetailsServiceImpl</div><div class="sdetail">Loads user from DB, verifies BCrypt hash</div></div></div>
+        <div class="step"><div class="snum">4</div><div class="scontent"><div class="stitle">JwtUtils.generateTokens()</div><div class="sdetail">Access token 15 min (stateless JWT). Refresh token 7 days, stored only as a SHA-256 hash with a family ID</div></div></div>
+        <div class="step"><div class="snum">5</div><div class="scontent"><div class="stitle">Response</div><div class="sdetail">{ accessToken } in body, refreshToken in httpOnly cookie</div></div></div>
+      </div></div>
+    </div>
+
+    <div class="fc">
+      <div class="fc-title" style="color:var(--accent2)">Request Authorization</div>
+      <div class="fc-body"><div class="steps">
+        <div class="step"><div class="snum">1</div><div class="scontent"><div class="stitle">JwtAuthFilter (OncePerRequest)</div><div class="sdetail">Extracts Bearer token from Authorization header</div></div></div>
+        <div class="step"><div class="snum">2</div><div class="scontent"><div class="stitle">Token Validation</div><div class="sdetail">Verifies signature, expiry; checks Redis blacklist for revoked JTIs</div></div></div>
+        <div class="step"><div class="snum">3</div><div class="scontent"><div class="stitle">SecurityContextHolder</div><div class="sdetail">Sets UsernamePasswordAuthToken with UserDetails and granted authorities</div></div></div>
+        <div class="step"><div class="snum">4</div><div class="scontent"><div class="stitle">@PreAuthorize</div><div class="sdetail">Method-level RBAC guards — hasRole('ADMIN'), hasRole('SELLER')</div></div></div>
+        <div class="step"><div class="snum">5</div><div class="scontent"><div class="stitle">@AuthenticationPrincipal</div><div class="sdetail">Controller receives authenticated UserDetails</div></div></div>
+      </div></div>
+    </div>
+
+    <div class="fc">
+      <div class="fc-title" style="color:var(--ok)">Token Refresh &amp; Rotation</div>
+      <div class="fc-body"><div class="steps">
+        <div class="step"><div class="snum">1</div><div class="scontent"><div class="stitle">Access token expires → 401</div><div class="sdetail">Client intercepts 401 Unauthorized</div></div></div>
+        <div class="step"><div class="snum">2</div><div class="scontent"><div class="stitle">POST /api/auth/refresh</div><div class="sdetail">Sends refresh token from httpOnly cookie</div></div></div>
+        <div class="step"><div class="snum">3</div><div class="scontent"><div class="stitle">DB Validation</div><div class="sdetail">Check refresh_tokens: not revoked, not expired, matches user</div></div></div>
+        <div class="step"><div class="snum">4</div><div class="scontent"><div class="stitle">Token Rotation</div><div class="sdetail">Old token marked used and a new pair is issued. If a used token returns, revoke the whole family and force re-login</div></div></div>
+        <div class="step"><div class="snum">5</div><div class="scontent"><div class="stitle">Retry original request</div><div class="sdetail">Client queues and retries failed requests with new access token</div></div></div>
+      </div></div>
+    </div>
+
+    <div class="fc">
+      <div class="fc-title" style="color:var(--ok)">OAuth2 Google / GitHub</div>
+      <div class="fc-body"><div class="steps">
+        <div class="step"><div class="snum">1</div><div class="scontent"><div class="stitle">GET /oauth2/authorize/google</div><div class="sdetail">Spring Security redirects to provider consent screen</div></div></div>
+        <div class="step"><div class="snum">2</div><div class="scontent"><div class="stitle">Callback with auth code</div><div class="sdetail">Provider redirects to /oauth2/callback/google with code</div></div></div>
+        <div class="step"><div class="snum">3</div><div class="scontent"><div class="stitle">CustomOAuth2UserService</div><div class="sdetail">Fetches user profile from provider, upserts local users record</div></div></div>
+        <div class="step"><div class="snum">4</div><div class="scontent"><div class="stitle">Issue JWT pair</div><div class="sdetail">Redirect carries a one-time code (60 s). The client exchanges it by POST. Tokens never appear in a URL</div></div></div>
+      </div></div>
+    </div>
+  </div>
+
+  <div style="margin-top:1.25rem">
+    <div class="dlabel">RBAC Permission Matrix</div>
+    <div style="overflow-x:auto;border:1px solid var(--border);border-radius:8px;">
+      <table class="api-tbl" style="display:table">
+        <thead><tr><th>Resource</th><th>ROLE_USER</th><th>ROLE_SELLER</th><th>ROLE_ADMIN</th></tr></thead>
+        <tbody>
+          <tr><td>Browse products</td><td style="color:var(--ok)">✓ Read</td><td style="color:var(--ok)">✓ Read</td><td style="color:var(--ok)">✓ Read</td></tr>
+          <tr><td>Manage products</td><td style="color:var(--danger)">✗</td><td style="color:var(--ok)">✓ Own only</td><td style="color:var(--ok)">✓ All</td></tr>
+          <tr><td>Manage categories</td><td style="color:var(--danger)">✗</td><td style="color:var(--danger)">✗</td><td style="color:var(--ok)">✓ Full</td></tr>
+          <tr><td>Place orders</td><td style="color:var(--ok)">✓ Own</td><td style="color:var(--ok)">✓ Own</td><td style="color:var(--ok)">✓ All</td></tr>
+          <tr><td>View all orders</td><td style="color:var(--danger)">✗</td><td style="color:var(--danger)">✗</td><td style="color:var(--ok)">✓ Full</td></tr>
+          <tr><td>Issue coupons</td><td style="color:var(--danger)">✗</td><td style="color:var(--danger)">✗</td><td style="color:var(--ok)">✓ Full</td></tr>
+          <tr><td>User management</td><td style="color:var(--danger)">✗</td><td style="color:var(--danger)">✗</td><td style="color:var(--ok)">✓ Full</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════ KAFKA ═══════════════════ -->
+<div class="panel" id="tab-kafka">
+  <h1 class="ph">Kafka Event Streams</h1>
+  <p class="pd">Topics, event types, producers, and consumer group routing</p>
+
+  <div class="topics-grid">
+
+    <div class="tkcard">
+      <div class="tk-hdr"><div class="tkname">order-events</div><div class="tkpart">key: orderId · p:3 · rf:3 · 7d</div></div>
+      <div class="evlist">
+        <div class="ev"><div class="edot" style="background:var(--warn)"></div><div class="ename">ORDER_PLACED</div><div class="eprod">Order Svc</div></div>
+        <div class="ev"><div class="edot" style="background:var(--ok)"></div><div class="ename">ORDER_CONFIRMED</div><div class="eprod">Order Svc</div></div>
+        <div class="ev"><div class="edot" style="background:var(--accent)"></div><div class="ename">ORDER_SHIPPED</div><div class="eprod">Admin</div></div>
+        <div class="ev"><div class="edot" style="background:var(--ok)"></div><div class="ename">ORDER_DELIVERED</div><div class="eprod">Admin</div></div>
+        <div class="ev"><div class="edot" style="background:var(--danger)"></div><div class="ename">ORDER_CANCELLED</div><div class="eprod">User / Admin</div></div>
+        <div class="ev"><div class="edot" style="background:var(--danger)"></div><div class="ename">ORDER_REFUND_INITIATED</div><div class="eprod">Order Svc</div></div>
+      </div>
+      <div class="rtags"><span class="rt">→ Notification Svc</span><span class="rt">→ Inventory Svc</span></div>
+    </div>
+
+    <div class="tkcard">
+      <div class="tk-hdr"><div class="tkname">payment-events</div><div class="tkpart">key: paymentId · p:3 · rf:3 · 30d</div></div>
+      <div class="evlist">
+        <div class="ev"><div class="edot" style="background:var(--warn)"></div><div class="ename">PAYMENT_INITIATED</div><div class="eprod">Order Svc</div></div>
+        <div class="ev"><div class="edot" style="background:var(--ok)"></div><div class="ename">PAYMENT_SUCCESS</div><div class="eprod">Gateway webhook</div></div>
+        <div class="ev"><div class="edot" style="background:var(--danger)"></div><div class="ename">PAYMENT_FAILED</div><div class="eprod">Gateway webhook</div></div>
+        <div class="ev"><div class="edot" style="background:var(--accent2)"></div><div class="ename">PAYMENT_REFUNDED</div><div class="eprod">Gateway webhook</div></div>
+      </div>
+      <div class="rtags"><span class="rt">→ Order Svc</span><span class="rt">→ Notification Svc</span></div>
+    </div>
+
+    <div class="tkcard">
+      <div class="tk-hdr"><div class="tkname">inventory-events</div><div class="tkpart">key: productId · p:2 · rf:3 · 3d</div></div>
+      <div class="evlist">
+        <div class="ev"><div class="edot" style="background:var(--ok)"></div><div class="ename">STOCK_UPDATED</div><div class="eprod">Product Svc</div></div>
+        <div class="ev"><div class="edot" style="background:var(--warn)"></div><div class="ename">LOW_STOCK_ALERT</div><div class="eprod">Inventory Svc</div></div>
+        <div class="ev"><div class="edot" style="background:var(--danger)"></div><div class="ename">OUT_OF_STOCK</div><div class="eprod">Inventory Svc</div></div>
+        <div class="ev"><div class="edot" style="background:var(--accent)"></div><div class="ename">STOCK_RESERVED</div><div class="eprod">Order Svc</div></div>
+        <div class="ev"><div class="edot" style="background:var(--accent2)"></div><div class="ename">STOCK_RELEASED</div><div class="eprod">Order Svc</div></div>
+      </div>
+      <div class="rtags"><span class="rt">→ Product Svc</span><span class="rt">→ Admin</span></div>
+    </div>
+
+    <div class="tkcard">
+      <div class="tk-hdr"><div class="tkname">notification-events</div><div class="tkpart">key: userId · p:2 · rf:3 · 1d</div></div>
+      <div class="evlist">
+        <div class="ev"><div class="edot" style="background:var(--accent)"></div><div class="ename">EMAIL_SEND</div><div class="eprod">Any service</div></div>
+        <div class="ev"><div class="edot" style="background:var(--ok)"></div><div class="ename">SMS_SEND</div><div class="eprod">Any service</div></div>
+        <div class="ev"><div class="edot" style="background:var(--accent2)"></div><div class="ename">PUSH_NOTIFICATION</div><div class="eprod">Any service</div></div>
+        <div class="ev"><div class="edot" style="background:var(--warn)"></div><div class="ename">OTP_REQUEST</div><div class="eprod">Auth Svc</div></div>
+      </div>
+      <div class="rtags"><span class="rt">→ Notification Svc</span></div>
+    </div>
+
+    <div class="tkcard">
+      <div class="tk-hdr"><div class="tkname">user-events</div><div class="tkpart">key: userId · p:2 · rf:3 · 14d</div></div>
+      <div class="evlist">
+        <div class="ev"><div class="edot" style="background:var(--ok)"></div><div class="ename">USER_REGISTERED</div><div class="eprod">Auth Svc</div></div>
+        <div class="ev"><div class="edot" style="background:var(--accent)"></div><div class="ename">USER_LOGIN</div><div class="eprod">Auth Svc</div></div>
+        <div class="ev"><div class="edot" style="background:var(--warn)"></div><div class="ename">USER_PROFILE_UPDATED</div><div class="eprod">User Svc</div></div>
+        <div class="ev"><div class="edot" style="background:var(--danger)"></div><div class="ename">USER_DEACTIVATED</div><div class="eprod">Admin</div></div>
+      </div>
+      <div class="rtags"><span class="rt">→ Notification Svc</span><span class="rt">→ Analytics</span></div>
+    </div>
+
+    <div class="tkcard">
+      <div class="tk-hdr"><div class="tkname">product-events</div><div class="tkpart">key: productId · p:2 · rf:3 · 7d</div></div>
+      <div class="evlist">
+        <div class="ev"><div class="edot" style="background:var(--ok)"></div><div class="ename">PRODUCT_CREATED</div><div class="eprod">Product Svc</div></div>
+        <div class="ev"><div class="edot" style="background:var(--warn)"></div><div class="ename">PRODUCT_UPDATED</div><div class="eprod">Product Svc</div></div>
+        <div class="ev"><div class="edot" style="background:var(--accent2)"></div><div class="ename">PRICE_CHANGED</div><div class="eprod">Product Svc</div></div>
+        <div class="ev"><div class="edot" style="background:var(--danger)"></div><div class="ename">PRODUCT_DELETED</div><div class="eprod">Admin</div></div>
+      </div>
+      <div class="rtags"><span class="rt">→ Elasticsearch</span><span class="rt">→ Cache Invalidate</span></div>
+    </div>
+
+  </div>
+
+  <div style="margin-top:1.25rem">
+    <div class="dlabel">application.yml — Kafka</div>
+    <div class="arch-wrap" style="padding:.9rem">
+      <pre style="font-family:'JetBrains Mono',monospace;font-size:.7rem;color:var(--text-muted)">spring:
+  kafka:
+    bootstrap-servers: localhost:9092
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+      acks: all          <span style="color:var(--ok)"># wait for all replicas to acknowledge</span>
+      retries: 3
+      properties:
+        enable.idempotence: true
+    consumer:
+      group-id: ecom-notification-group
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+    listener:
+      ack-mode: MANUAL_IMMEDIATE  <span style="color:var(--ok)"># manual commit for at-least-once delivery</span></pre>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════ REDIS ═══════════════════ -->
+<div class="panel" id="tab-redis">
+  <h1 class="ph">Redis Cache Strategy</h1>
+  <p class="pd">Key patterns, TTL policies, data types, and eviction rules</p>
+
+  <div class="redis-grid">
+
+    <div class="rcard">
+      <div class="rtitle">Recently Viewed</div>
+      <div class="rpat">recent:{userId}<br>→ LIST of productIds (LPUSH + LTRIM 0 19)</div>
+      <div class="rttl"><span>TTL: 30 d</span><span>Type: LIST</span><span>Use: personalization</span></div>
+    </div>
+
+    <div class="rcard">
+      <div class="rtitle">Co-purchase Recommendations</div>
+      <div class="rpat">reco:{productId}<br>→ ZSET { relatedProductId: co-purchase count }</div>
+      <div class="rttl"><span>TTL: 24 h (nightly rebuild)</span><span>Type: SORTED SET</span><span>Read: ZREVRANGE 0 7</span></div>
+    </div>
+
+    <div class="rcard">
+      <div class="rtitle">Live Order Status</div>
+      <div class="rpat">order:status:{orderId}<br>→ STRING (last known state)<br>pub/sub channel: order:{orderId}</div>
+      <div class="rttl"><span>TTL: 24 h</span><span>Type: STRING + PUB/SUB</span><span>Feeds SSE stream</span></div>
+    </div>
+
+    <div class="rcard">
+      <div class="rtitle">Single-flight Lock</div>
+      <div class="rpat">lock:{cacheKey}<br>→ SET key token NX PX 3000</div>
+      <div class="rttl"><span>TTL: 3 s</span><span>Type: STRING</span><span>Use: cache stampede guard</span></div>
+    </div>
+
+    <div class="rcard">
+      <div class="rtitle">Refresh-Session Registry</div>
+      <div class="rpat">session:{userId}:{familyId}<br>→ HASH { device, ip, lastUsedAt }</div>
+      <div class="rttl"><span>TTL: 7 d (refresh life)</span><span>Type: HASH</span><span>Revoke: whole family</span></div>
+    </div>
+
+    <div class="rcard">
+      <div class="rtitle">JWT Blacklist</div>
+      <div class="rpat">jwt:blacklist:{jti}<br>→ "revoked"</div>
+      <div class="rttl"><span>TTL: = token expiry</span><span>Type: STRING</span><span>Use: Logout</span></div>
+    </div>
+
+    <div class="rcard">
+      <div class="rtitle">Shopping Cart</div>
+      <div class="rpat">cart:{userId}<br>→ HASH { productId: { qty, price, name } }</div>
+      <div class="rttl"><span>TTL: 7 days</span><span>Type: HASH</span><span>Sync: checkout → DB</span></div>
+    </div>
+
+    <div class="rcard">
+      <div class="rtitle">Token-Bucket Limiter</div>
+      <div class="rpat">rl:{scope}:{id}<br>→ HASH { tokens, ts } updated by Lua (atomic)</div>
+      <div class="rttl"><span>TTL: 60 s idle</span><span>Type: HASH + Lua</span><span>20 rps, burst 40</span></div>
+    </div>
+
+    <div class="rcard">
+      <div class="rtitle">Product Cache</div>
+      <div class="rpat">product:{productId}  → JSON<br>category:{id}:products → LIST of IDs</div>
+      <div class="rttl"><span>TTL: 10 min</span><span>Type: STRING</span><span>Evict: on update</span></div>
+    </div>
+
+    <div class="rcard">
+      <div class="rtitle">OTP Store</div>
+      <div class="rpat">otp:{email}<br>→ HASH { code, attempts, type }</div>
+      <div class="rttl"><span>TTL: 5 min</span><span>Type: HASH</span><span>Max attempts: 3</span></div>
+    </div>
+
+    <div class="rcard">
+      <div class="rtitle">Popular Products</div>
+      <div class="rpat">leaderboard:products:views<br>→ ZSET { productId: view_score }</div>
+      <div class="rttl"><span>TTL: 24 h refresh</span><span>Type: SORTED SET</span><span>Query: ZREVRANGE</span></div>
+    </div>
+
+    <div class="rcard">
+      <div class="rtitle">Pub/Sub Real-time</div>
+      <div class="rpat">Channel: order-status-updates<br>Channel: stock-alerts · price-drops</div>
+      <div class="rttl"><span>TTL: none (stream)</span><span>Type: PUB/SUB</span><span>Bridge: STOMP/WS</span></div>
+    </div>
+
+  </div>
+
+  <div style="margin-top:1.25rem">
+    <div class="dlabel">application.yml — Redis + Caching</div>
+    <div class="arch-wrap" style="padding:.9rem">
+      <pre style="font-family:'JetBrains Mono',monospace;font-size:.7rem;color:var(--text-muted)">spring:
+  cache:
+    type: redis
+  redis:
+    host: localhost
+    port: 6379
+    timeout: 2000ms
+    lettuce:
+      pool: { max-active: 10, max-idle: 8, min-idle: 2 }
+
+<span style="color:var(--ok)"># @EnableCaching on @SpringBootApplication
+# @Cacheable(value="products", key="#productId")        → auto-cache on read
+# @CacheEvict(value="products", key="#productId")       → invalidate on write
+# RedisCacheConfiguration.defaultCacheConfig()
+#   .entryTtl(Duration.ofMinutes(10))
+#   .disableCachingNullValues()</span></pre>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════ API REFERENCE ═══════════════════ -->
+<div class="panel" id="tab-api">
+  <h1 class="ph">API Reference</h1>
+  <p class="pd">REST endpoints — base path: <code style="font-family:'JetBrains Mono',monospace;font-size:.82rem">/api</code></p>
+
+  <div class="api-sec">
+    <div class="dlabel" style="color:var(--accent2)">Authentication · planned</div>
+    <div style="overflow-x:auto;border:1px solid var(--border);border-radius:8px;">
+      <table class="api-tbl" style="display:table">
+        <thead><tr><th>Method</th><th>Endpoint</th><th>Description</th><th>Auth</th></tr></thead>
+        <tbody>
+          <tr><td><span class="mth mpost">POST</span></td><td><span class="apath">/auth/register</span></td><td>Register new user account</td><td><span class="abadge apub">PUBLIC</span></td></tr>
+          <tr><td><span class="mth mpost">POST</span></td><td><span class="apath">/auth/login</span></td><td>Login, receive JWT pair</td><td><span class="abadge apub">PUBLIC</span></td></tr>
+          <tr><td><span class="mth mpost">POST</span></td><td><span class="apath">/auth/refresh</span></td><td>Refresh access token (rotation)</td><td><span class="abadge apub">PUBLIC</span></td></tr>
+          <tr><td><span class="mth mpost">POST</span></td><td><span class="apath">/auth/logout</span></td><td>Revoke tokens, blacklist JTI</td><td><span class="abadge ausr">USER</span></td></tr>
+          <tr><td><span class="mth mget">GET</span></td><td><span class="apath">/oauth2/authorize/{provider}</span></td><td>OAuth2 social login redirect</td><td><span class="abadge apub">PUBLIC</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="api-sec">
+    <div class="dlabel" style="color:var(--ok)">Categories · live in code, writes unprotected</div>
+    <div style="overflow-x:auto;border:1px solid var(--border);border-radius:8px;">
+      <table class="api-tbl" style="display:table">
+        <thead><tr><th>Method</th><th>Endpoint</th><th>Description</th><th>Auth</th></tr></thead>
+        <tbody>
+          <tr><td><span class="mth mget">GET</span></td><td><span class="apath">/public/categories</span></td><td>List all (paginated) ?pageNumber &amp; pageSize</td><td><span class="abadge apub">PUBLIC</span></td></tr>
+          <tr><td><span class="mth mpost">POST</span></td><td><span class="apath">/admin/categories</span></td><td>Create category <span class="st st-p0">P0 · open today</span></td><td><span class="abadge aadm">ADMIN</span></td></tr>
+          <tr><td><span class="mth mput">PUT</span></td><td><span class="apath">/admin/categories/{id}</span></td><td>Update category <span class="st st-p0">P0 · open today</span></td><td><span class="abadge aadm">ADMIN</span></td></tr>
+          <tr><td><span class="mth mdel">DELETE</span></td><td><span class="apath">/admin/categories/{id}</span></td><td>Delete category</td><td><span class="abadge aadm">ADMIN</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="api-sec">
+    <div class="dlabel" style="color:var(--ok)">Products · planned</div>
+    <div style="overflow-x:auto;border:1px solid var(--border);border-radius:8px;">
+      <table class="api-tbl" style="display:table">
+        <thead><tr><th>Method</th><th>Endpoint</th><th>Description</th><th>Auth</th></tr></thead>
+        <tbody>
+          <tr><td><span class="mth mget">GET</span></td><td><span class="apath">/public/products</span></td><td>List products (paged + sorted)</td><td><span class="abadge apub">PUBLIC</span></td></tr>
+          <tr><td><span class="mth mget">GET</span></td><td><span class="apath">/public/products/{id}</span></td><td>Get product detail</td><td><span class="abadge apub">PUBLIC</span></td></tr>
+          <tr><td><span class="mth mget">GET</span></td><td><span class="apath">/public/products/keyword/{kw}</span></td><td>Search products by keyword</td><td><span class="abadge apub">PUBLIC</span></td></tr>
+          <tr><td><span class="mth mget">GET</span></td><td><span class="apath">/public/categories/{catId}/products</span></td><td>Products by category</td><td><span class="abadge apub">PUBLIC</span></td></tr>
+          <tr><td><span class="mth mpost">POST</span></td><td><span class="apath">/admin/categories/{catId}/products</span></td><td>Create product</td><td><span class="abadge aadm">ADMIN</span></td></tr>
+          <tr><td><span class="mth mput">PUT</span></td><td><span class="apath">/admin/products/{id}</span></td><td>Update product details</td><td><span class="abadge aadm">ADMIN</span></td></tr>
+          <tr><td><span class="mth mput">PUT</span></td><td><span class="apath">/admin/products/{id}/image</span></td><td>Upload product image (multipart)</td><td><span class="abadge aadm">ADMIN</span></td></tr>
+          <tr><td><span class="mth mdel">DELETE</span></td><td><span class="apath">/admin/products/{id}</span></td><td>Delete product</td><td><span class="abadge aadm">ADMIN</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="api-sec">
+    <div class="dlabel" style="color:var(--warn)">Cart · planned</div>
+    <div style="overflow-x:auto;border:1px solid var(--border);border-radius:8px;">
+      <table class="api-tbl" style="display:table">
+        <thead><tr><th>Method</th><th>Endpoint</th><th>Description</th><th>Auth</th></tr></thead>
+        <tbody>
+          <tr><td><span class="mth mget">GET</span></td><td><span class="apath">/carts</span></td><td>Get current user's cart</td><td><span class="abadge ausr">USER</span></td></tr>
+          <tr><td><span class="mth mpost">POST</span></td><td><span class="apath">/carts/products/{productId}/quantity/{qty}</span></td><td>Add item to cart</td><td><span class="abadge ausr">USER</span></td></tr>
+          <tr><td><span class="mth mput">PUT</span></td><td><span class="apath">/carts/products/{productId}/quantity/{op}</span></td><td>Increase / decrease quantity</td><td><span class="abadge ausr">USER</span></td></tr>
+          <tr><td><span class="mth mdel">DELETE</span></td><td><span class="apath">/carts/{cartId}/products/{productId}</span></td><td>Remove item from cart</td><td><span class="abadge ausr">USER</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="api-sec">
+    <div class="dlabel" style="color:var(--danger)">Orders &amp; Payments · planned</div>
+    <div style="overflow-x:auto;border:1px solid var(--border);border-radius:8px;">
+      <table class="api-tbl" style="display:table">
+        <thead><tr><th>Method</th><th>Endpoint</th><th>Description</th><th>Auth</th></tr></thead>
+        <tbody>
+          <tr><td><span class="mth mpost">POST</span></td><td><span class="apath">/order/users/payments/{payMethod}</span></td><td>Place order from cart</td><td><span class="abadge ausr">USER</span></td></tr>
+          <tr><td><span class="mth mget">GET</span></td><td><span class="apath">/orders/my</span></td><td>Current user's order history</td><td><span class="abadge ausr">USER</span></td></tr>
+          <tr><td><span class="mth mget">GET</span></td><td><span class="apath">/orders/{orderId}</span></td><td>Get order detail</td><td><span class="abadge ausr">USER</span></td></tr>
+          <tr><td><span class="mth mget">GET</span></td><td><span class="apath">/admin/orders</span></td><td>All orders (admin, paged)</td><td><span class="abadge aadm">ADMIN</span></td></tr>
+          <tr><td><span class="mth mput">PUT</span></td><td><span class="apath">/admin/orders/{id}/status</span></td><td>Update order status</td><td><span class="abadge aadm">ADMIN</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="api-sec">
+    <div class="dlabel" style="color:var(--accent)">Users &amp; Addresses · planned</div>
+    <div style="overflow-x:auto;border:1px solid var(--border);border-radius:8px;">
+      <table class="api-tbl" style="display:table">
+        <thead><tr><th>Method</th><th>Endpoint</th><th>Description</th><th>Auth</th></tr></thead>
+        <tbody>
+          <tr><td><span class="mth mget">GET</span></td><td><span class="apath">/users/profile</span></td><td>Get current user profile</td><td><span class="abadge ausr">USER</span></td></tr>
+          <tr><td><span class="mth mput">PUT</span></td><td><span class="apath">/users/profile</span></td><td>Update profile</td><td><span class="abadge ausr">USER</span></td></tr>
+          <tr><td><span class="mth mpost">POST</span></td><td><span class="apath">/addresses</span></td><td>Add address</td><td><span class="abadge ausr">USER</span></td></tr>
+          <tr><td><span class="mth mget">GET</span></td><td><span class="apath">/addresses</span></td><td>List user addresses</td><td><span class="abadge ausr">USER</span></td></tr>
+          <tr><td><span class="mth mput">PUT</span></td><td><span class="apath">/addresses/{id}</span></td><td>Update address</td><td><span class="abadge ausr">USER</span></td></tr>
+          <tr><td><span class="mth mdel">DELETE</span></td><td><span class="apath">/addresses/{id}</span></td><td>Delete address</td><td><span class="abadge ausr">USER</span></td></tr>
+          <tr><td><span class="mth mget">GET</span></td><td><span class="apath">/admin/users</span></td><td>List all users</td><td><span class="abadge aadm">ADMIN</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+<!-- ═══════════════════ CUSTOMER JOURNEY ═══════════════════ -->
+<div class="panel" id="tab-journey">
+  <h1 class="ph">Customer Journey &amp; Smooth Transitions</h1>
+  <p class="pd">Eight stages from first visit to repeat purchase. Each shows what the shopper sees, how the change should feel, what the system does, and the latency it must meet.</p>
+
+  <div class="dlabel" style="color:var(--accent)">Stages</div>
+  <div class="journey">
+
+    <div class="jcard">
+      <div class="jhead"><div class="jn">1</div><div class="jname">Discover</div></div>
+      <div class="jrow"><div class="jk">Sees</div><div class="jv">Category grid with skeleton tiles sized like the final cards. Images fade in from a blurred preview.</div></div>
+      <div class="jrow"><div class="jk">Transition</div><div class="jv">A tile opens into the product page with a shared-image morph (View Transitions API, with a fade as fallback).</div></div>
+      <div class="jrow"><div class="jk">System</div><div class="jv">Listing served from the CDN (s-maxage=60, stale-while-revalidate=300). Cache misses read the replica.</div></div>
+      <div class="jrow"><div class="jk">Emits</div><div class="jv">product_viewed to analytics-events. LPUSH recent:{userId}.</div></div>
+      <div class="jbud">LCP &lt; 2.5 s · listing p95 &lt; 150 ms on cache hit</div>
+    </div>
+
+    <div class="jcard">
+      <div class="jhead"><div class="jn">2</div><div class="jname">Search</div></div>
+      <div class="jrow"><div class="jk">Sees</div><div class="jv">Suggestions after two characters. Typos still match. Facets update in place.</div></div>
+      <div class="jrow"><div class="jk">Transition</div><div class="jv">Previous results stay on screen until new ones arrive, so the list never flashes empty. The URL updates, so Back returns to the same results.</div></div>
+      <div class="jrow"><div class="jk">System</div><div class="jv">Edge n-gram index for suggestions, fuzzy match for results. If Elasticsearch times out, fall back to a short replica query.</div></div>
+      <div class="jrow"><div class="jk">Emits</div><div class="jv">search_performed (query, hits). Zero-hit queries feed a merchandising report.</div></div>
+      <div class="jbud">suggest p95 &lt; 80 ms · search p95 &lt; 300 ms</div>
+    </div>
+
+    <div class="jcard">
+      <div class="jhead"><div class="jn">3</div><div class="jname">Product</div></div>
+      <div class="jrow"><div class="jk">Sees</div><div class="jv">Price, stock state ("Only 3 left" below a threshold), delivery estimate for the shopper's postcode, wishlist heart.</div></div>
+      <div class="jrow"><div class="jk">Transition</div><div class="jv">The heart fills at once. If the request fails, it reverts and a toast says why.</div></div>
+      <div class="jrow"><div class="jk">System</div><div class="jv">Product JSON from Redis (10 min). Stock comes from the inventory cache, never from product JSON.</div></div>
+      <div class="jrow"><div class="jk">Emits</div><div class="jv">product_viewed. wishlist_added writes the wishlists table.</div></div>
+      <div class="jbud">detail p95 &lt; 120 ms on cache hit</div>
+    </div>
+
+    <div class="jcard">
+      <div class="jhead"><div class="jn">4</div><div class="jname">Cart</div></div>
+      <div class="jrow"><div class="jk">Sees</div><div class="jv">Quantity and header badge update instantly. A guest cart survives a refresh.</div></div>
+      <div class="jrow"><div class="jk">Transition</div><div class="jv">On login the guest cart merges into the account cart. If stock or price changed, one panel explains it before checkout.</div></div>
+      <div class="jrow"><div class="jk">System</div><div class="jv">Cart hash in Redis, written through to cart_items. Merge rule: quantity = min(guest + account, stock). Prices re-read on every view.</div></div>
+      <div class="jrow"><div class="jk">Emits</div><div class="jv">cart_updated, which starts the abandonment clock.</div></div>
+      <div class="jbud">add-to-cart p95 &lt; 200 ms</div>
+    </div>
+
+    <div class="jcard">
+      <div class="jhead"><div class="jn">5</div><div class="jname">Checkout</div></div>
+      <div class="jrow"><div class="jk">Sees</div><div class="jv">One screen. Saved address and payment method preselected. Tax, coupon and points each on their own line.</div></div>
+      <div class="jrow"><div class="jk">Transition</div><div class="jv">A price or stock change blocks payment with a diff ("1,299.00 is now 1,199.00. Continue?"). It is never a surprise on the last step. Form input survives errors.</div></div>
+      <div class="jrow"><div class="jk">System</div><div class="jv">Checkout saga starts (see Order Engine). Stock held 10 minutes. Coupon applied with a conditional update.</div></div>
+      <div class="jrow"><div class="jk">Emits</div><div class="jv">checkout_started, checkout_step_completed.</div></div>
+      <div class="jbud">checkout API p95 &lt; 1.2 s, excluding gateway</div>
+    </div>
+
+    <div class="jcard">
+      <div class="jhead"><div class="jn">6</div><div class="jname">Pay</div></div>
+      <div class="jrow"><div class="jk">Sees</div><div class="jv">Gateway sheet opens inline with UPI, cards or wallets. 3-D Secure appears inside the same sheet.</div></div>
+      <div class="jrow"><div class="jk">Transition</div><div class="jv">A "Processing payment" state with a progress line, never a blank screen. If the webhook is slow: "Confirming with your bank", then the order streams in.</div></div>
+      <div class="jrow"><div class="jk">System</div><div class="jv">Payment intent keyed by orderId. Webhook signature checked, de-duplicated on gateway_payment_id, then PAYMENT_SUCCESS written to the outbox.</div></div>
+      <div class="jrow"><div class="jk">Emits</div><div class="jv">payment_success or payment_failed to payment-events.</div></div>
+      <div class="jbud">webhook to PAID p99 &lt; 3 s</div>
+    </div>
+
+    <div class="jcard">
+      <div class="jhead"><div class="jn">7</div><div class="jname">Track</div></div>
+      <div class="jrow"><div class="jk">Sees</div><div class="jv">Live timeline: Placed, Confirmed, Packed, Shipped, Out for delivery, Delivered. It moves without a refresh.</div></div>
+      <div class="jrow"><div class="jk">Transition</div><div class="jv">Each milestone animates in once. After a dropped connection the page reloads the current state over REST before it reconnects, so nothing is missed.</div></div>
+      <div class="jrow"><div class="jk">System</div><div class="jv">order-events feed Redis pub/sub, which fans out to SSE connections. Last state cached per order for the first paint.</div></div>
+      <div class="jrow"><div class="jk">Emits</div><div class="jv">None new. Reads ORDER_* events.</div></div>
+      <div class="jbud">status event on screen p99 &lt; 2 s</div>
+    </div>
+
+    <div class="jcard">
+      <div class="jhead"><div class="jn">8</div><div class="jname">Review &amp; return</div></div>
+      <div class="jrow"><div class="jk">Sees</div><div class="jv">"Rate your purchase" three days after delivery, with items prefilled. Points-earned toast. One-tap reorder.</div></div>
+      <div class="jrow"><div class="jk">Transition</div><div class="jv">The prompt is a dismissable card. It never blocks the page and is never shown twice.</div></div>
+      <div class="jrow"><div class="jk">System</div><div class="jv">Scheduled job after ORDER_DELIVERED. reviews.is_verified set from order_items. loyalty_ledger earn entry.</div></div>
+      <div class="jrow"><div class="jk">Emits</div><div class="jv">review_requested to notification-events. points_earned.</div></div>
+      <div class="jbud">review prompt 72 h ± 1 h after delivery</div>
+    </div>
+
+  </div>
+
+  <div class="dlabel" style="color:var(--ok)">Transition rules</div>
+  <div class="rules">
+    <div class="rule"><b>Optimistic, then reconcile</b>Cart, quantity and wishlist changes show at once. The server reply confirms them or rolls them back with a reason.</div>
+    <div class="rule"><b>Never blank</b>Skeletons match the final layout. Keep the last results on screen while the next request runs.</div>
+    <div class="rule"><b>Stable layout</b>Reserve image and price boxes with aspect-ratio. Target CLS under 0.1.</div>
+    <div class="rule"><b>Price truth at checkout</b>The order stores the price the shopper accepted. Any change before payment needs an explicit confirm step.</div>
+    <div class="rule"><b>Recoverable errors</b>A failed payment keeps the cart, address and form values. Retries reuse the same Idempotency-Key, so a double tap never charges twice.</div>
+    <div class="rule"><b>Motion with restraint</b>150 to 280 ms ease-out for panels and toasts. Everything respects prefers-reduced-motion.</div>
+    <div class="rule"><b>Live without refresh</b>Order status streams over SSE. If the stream drops, fall back to polling every 30 s.</div>
+    <div class="rule"><b>Guest to member</b>A guest keeps the cart, wishlist and recently viewed list after signing up. Nothing is lost at the moment of conversion.</div>
+  </div>
+</div>
+
+<!-- ═══════════════════ ORDER ENGINE ═══════════════════ -->
+<div class="panel" id="tab-order">
+  <h1 class="ph">Order Engine &amp; Checkout Saga</h1>
+  <p class="pd">One state machine decides every order transition. A saga with compensations keeps stock, coupons and payment consistent. A transactional outbox keeps the database and Kafka in step.</p>
+
+  <div class="dlabel" style="color:var(--accent)">Order state machine</div>
+  <div class="sm-wrap">
+    <svg viewBox="0 0 970 300" style="width:100%;min-width:760px;display:block" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <marker id="om" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><polygon points="0 0,8 3,0 6" fill="#94A3B8"/></marker>
+      </defs>
+      <g stroke="#94A3B8" stroke-width="1.4" fill="none" marker-end="url(#om)">
+        <line x1="120" y1="51" x2="148" y2="51"/>
+        <line x1="260" y1="51" x2="288" y2="51"/>
+        <line x1="400" y1="51" x2="428" y2="51"/>
+        <line x1="540" y1="51" x2="568" y2="51"/>
+        <line x1="680" y1="51" x2="708" y2="51"/>
+        <line x1="820" y1="51" x2="848" y2="51"/>
+        <line x1="65" y1="72" x2="65" y2="128"/>
+        <line x1="345" y1="72" x2="345" y2="128"/>
+        <line x1="905" y1="72" x2="905" y2="128"/>
+        <line x1="850" y1="151" x2="822" y2="151"/>
+        <line x1="765" y1="172" x2="630" y2="228"/>
+        <line x1="345" y1="172" x2="620" y2="228"/>
+      </g>
+      <g stroke="#3B82F6" stroke-width="1.4" fill="#1E3A5F">
+        <rect x="10" y="30" width="110" height="42" rx="6"/>
+        <rect x="150" y="30" width="110" height="42" rx="6"/>
+        <rect x="290" y="30" width="110" height="42" rx="6"/>
+        <rect x="430" y="30" width="110" height="42" rx="6"/>
+        <rect x="570" y="30" width="110" height="42" rx="6"/>
+        <rect x="710" y="30" width="110" height="42" rx="6"/>
+        <rect x="850" y="30" width="110" height="42" rx="6"/>
+      </g>
+      <g font-family="monospace" font-size="9" fill="#DBEAFE" text-anchor="middle">
+        <text x="65" y="56">PENDING_PAYMENT</text>
+        <text x="205" y="56">PAID</text>
+        <text x="345" y="56">CONFIRMED</text>
+        <text x="485" y="56">PACKED</text>
+        <text x="625" y="56">SHIPPED</text>
+        <text x="765" y="56">OUT_FOR_DELIVERY</text>
+        <text x="905" y="56">DELIVERED</text>
+      </g>
+      <g stroke="#F87171" stroke-width="1.4" fill="#450A0A">
+        <rect x="10" y="130" width="110" height="42" rx="6"/>
+        <rect x="290" y="130" width="110" height="42" rx="6"/>
+      </g>
+      <g stroke="#A78BFA" stroke-width="1.4" fill="#2D1B69">
+        <rect x="710" y="130" width="110" height="42" rx="6"/>
+        <rect x="850" y="130" width="110" height="42" rx="6"/>
+        <rect x="570" y="230" width="110" height="42" rx="6"/>
+      </g>
+      <g font-family="monospace" font-size="9" text-anchor="middle">
+        <text x="65" y="156" fill="#FECACA">PAYMENT_FAILED</text>
+        <text x="345" y="156" fill="#FECACA">CANCELLED</text>
+        <text x="765" y="156" fill="#EDE9FE">RETURNED</text>
+        <text x="905" y="156" fill="#EDE9FE">RETURN_REQUESTED</text>
+        <text x="625" y="256" fill="#EDE9FE">REFUNDED</text>
+      </g>
+      <text x="10" y="292" font-family="monospace" font-size="10" fill="#CBD5E1">Blue: happy path · Red: order stops and holds release · Violet: money returns to the shopper</text>
+    </svg>
+  </div>
+
+  <div class="dlabel" style="color:var(--accent)">Allowed transitions</div>
+  <div class="tbl-wrap"><table class="tbl">
+    <thead><tr><th>From → To</th><th>Trigger</th><th>Guard</th><th>Emits</th></tr></thead>
+    <tbody>
+      <tr><td class="m">PENDING_PAYMENT → PAID</td><td>payment.captured webhook</td><td>Signature valid; amount equals order total</td><td class="m">PAYMENT_SUCCESS</td></tr>
+      <tr><td class="m">PENDING_PAYMENT → PAYMENT_FAILED</td><td>Gateway failure, or 30 min with no capture</td><td>No captured payment exists</td><td class="m">PAYMENT_FAILED; holds released</td></tr>
+      <tr><td class="m">PAID → CONFIRMED</td><td>Order consumer on PAYMENT_SUCCESS</td><td>Holds committed to on_hand</td><td class="m">ORDER_CONFIRMED</td></tr>
+      <tr><td class="m">PAID or CONFIRMED → CANCELLED</td><td>Customer or admin</td><td>Before PACKED</td><td class="m">ORDER_CANCELLED; refund if paid</td></tr>
+      <tr><td class="m">CONFIRMED → PACKED</td><td>Warehouse scan</td><td>Every line scanned</td><td class="m">ORDER_PACKED</td></tr>
+      <tr><td class="m">PACKED → SHIPPED</td><td>Carrier pickup webhook</td><td>Tracking number present</td><td class="m">ORDER_SHIPPED</td></tr>
+      <tr><td class="m">SHIPPED → OUT_FOR_DELIVERY</td><td>Carrier scan</td><td>None</td><td class="m">ORDER_OUT_FOR_DELIVERY</td></tr>
+      <tr><td class="m">OUT_FOR_DELIVERY → DELIVERED</td><td>Proof of delivery</td><td>None</td><td class="m">ORDER_DELIVERED; starts review and points</td></tr>
+      <tr><td class="m">DELIVERED → RETURN_REQUESTED</td><td>Customer</td><td>Within 7 days of delivery</td><td class="m">RETURN_REQUESTED</td></tr>
+      <tr><td class="m">RETURN_REQUESTED → RETURNED</td><td>Item received at warehouse</td><td>Item matches an order line</td><td class="m">RETURN_RECEIVED</td></tr>
+      <tr><td class="m">CANCELLED or RETURNED → REFUNDED</td><td>Gateway confirms refund</td><td>Refund ≤ captured amount</td><td class="m">REFUND_COMPLETED</td></tr>
+    </tbody>
+  </table></div>
+  <p class="pd">All transitions go through one OrderStateMachine class. Controllers and consumers request a transition and never set status directly. Illegal moves throw. Every accepted move writes order_status_history and an outbox row in the same transaction.</p>
+
+  <div class="dlabel" style="color:var(--warn)">Checkout saga, with compensations</div>
+  <div class="tbl-wrap"><table class="tbl">
+    <thead><tr><th>#</th><th>Step</th><th>If a later step fails, compensate with</th></tr></thead>
+    <tbody>
+      <tr><td class="m">1</td><td>Re-price the cart from the database and compare with what the shopper saw.</td><td>Nothing to undo. Return 409 with the price diff.</td></tr>
+      <tr><td class="m">2</td><td>Create the order as PENDING_PAYMENT, with ORDER_PLACED in the outbox.</td><td>Mark CANCELLED.</td></tr>
+      <tr><td class="m">3</td><td>Hold stock in inventory_reservations for 10 minutes.</td><td>Release the hold (reserved minus quantity).</td></tr>
+      <tr><td class="m">4</td><td>Apply the coupon: UPDATE coupons SET used_count = used_count + 1 WHERE used_count &lt; max_uses.</td><td>Decrement used_count.</td></tr>
+      <tr><td class="m">5</td><td>Create the gateway payment intent, keyed by orderId.</td><td>Cancel the intent at the gateway.</td></tr>
+      <tr><td class="m">6</td><td>Shopper pays. A verified, de-duplicated webhook moves the order to PAID.</td><td>If the order was already cancelled, refund automatically.</td></tr>
+      <tr><td class="m">7</td><td>Commit holds to on_hand, clear the cart, emit ORDER_CONFIRMED.</td><td>Nothing. Every step is idempotent, so a retry is safe.</td></tr>
+    </tbody>
+  </table></div>
+  <div class="rule" style="margin-bottom:1.5rem"><b>Reconciliation job, every 5 minutes</b>Orders still PENDING_PAYMENT after 15 minutes get a status check at the gateway. A capture the gateway holds but we missed is written in. Orders with no capture after 30 minutes become PAYMENT_FAILED.</div>
+
+  <div class="dlabel" style="color:var(--kafka)">Messaging guarantees</div>
+  <div class="rules">
+    <div class="rule"><b>Transactional outbox</b>The order row and its outbox_events row commit together. A relay (Debezium CDC, or a poller using FOR UPDATE SKIP LOCKED) publishes to Kafka with key = orderId. No dual writes.</div>
+    <div class="rule"><b>Idempotent producers</b>enable.idempotence=true, acks=all, replication factor 3, min.insync.replicas=2. Losing one broker never loses an acknowledged event.</div>
+    <div class="rule"><b>Idempotent consumers</b>processed_events(consumer_group, event_id) is checked in the same transaction as the side effect. Duplicates are skipped.</div>
+    <div class="rule"><b>Ordering by key</b>order-events are keyed by orderId and stock events by productId, so each entity's events stay in order. Order across entities is not promised.</div>
+    <div class="rule"><b>Retry, then DLT</b>Three attempts with backoff (1 s, 4 s, 16 s, plus jitter), then the record goes to &lt;topic&gt;.DLT. Alert when DLT depth is above zero. Replay after the fix.</div>
+    <div class="rule"><b>Idempotency-Key on writes</b>POST /api/v1/orders and POST /api/v1/payments. Same key and body return the stored response. Same key with a different body returns 422.</div>
+  </div>
+
+  <div class="dlabel" style="color:var(--accent2)">Checkout API contract</div>
+  <div class="tbl-wrap"><table class="tbl">
+    <thead><tr><th>Method</th><th>Endpoint</th><th>Notes</th></tr></thead>
+    <tbody>
+      <tr><td class="m">POST</td><td class="m">/api/v1/orders</td><td>Idempotency-Key required. 201 with Location. 409 on price or stock change, diff in body.</td></tr>
+      <tr><td class="m">GET</td><td class="m">/api/v1/orders/{id}</td><td>Current state and timeline.</td></tr>
+      <tr><td class="m">GET</td><td class="m">/api/v1/orders/{id}/events</td><td>Server-Sent Events. Honours Last-Event-ID on reconnect.</td></tr>
+      <tr><td class="m">POST</td><td class="m">/api/v1/webhooks/payments/{gateway}</td><td>No JWT. HMAC signature and timestamp (within 5 min) required.</td></tr>
+      <tr><td class="m">POST</td><td class="m">/api/v1/carts/merge</td><td>Merges the guest cart into the account cart at login.</td></tr>
+      <tr><td class="m">PUT</td><td class="m">/api/v1/admin/orders/{id}/status</td><td>Body {target}. The state machine accepts or rejects it with 422.</td></tr>
+      <tr><td class="m">POST</td><td class="m">/api/v1/orders/{id}/returns</td><td>Starts RETURN_REQUESTED. Enforces the 7-day window.</td></tr>
+    </tbody>
+  </table></div>
+</div>
+
+<!-- ═══════════════════ ENGAGEMENT ═══════════════════ -->
+<div class="panel" id="tab-engage">
+  <h1 class="ph">Customer Engagement</h1>
+  <p class="pd">Features that bring shoppers back. Each lists its trigger event, where its state lives, the Kafka topic it rides, and the metric it should move.</p>
+
+  <div class="tbl-wrap"><table class="tbl">
+    <thead><tr><th>Feature</th><th>Trigger</th><th>State lives in</th><th>Topic</th><th>Metric</th></tr></thead>
+    <tbody>
+      <tr><td><b>Wishlist and price-drop alert</b></td><td>PRICE_CHANGED where the new price is lower and the product is wishlisted</td><td class="m">wishlists</td><td class="m">product-events → notification-events</td><td>Wishlist to cart rate</td></tr>
+      <tr><td><b>Back-in-stock alert</b></td><td>Stock moves from 0 to above 0</td><td class="m">stock_alerts (one send per restock)</td><td class="m">inventory-events → notification-events</td><td>Recovered demand</td></tr>
+      <tr><td><b>Abandoned cart recovery</b></td><td>Cart idle for 1 h with items and no order</td><td>carts.updated_at index, swept every 5 min. Redis expiry events are not reliable enough</td><td class="m">notification-events</td><td>Cart recovery rate</td></tr>
+      <tr><td><b>Recently viewed</b></td><td>product_viewed</td><td class="m">Redis LIST recent:{userId}, 20 items</td><td class="m">analytics-events</td><td>Click-through on the strip</td></tr>
+      <tr><td><b>Co-purchase recommendations</b></td><td>ORDER_CONFIRMED</td><td class="m">Redis ZSET reco:{productId}, rebuilt nightly</td><td class="m">order-events</td><td>Average order value</td></tr>
+      <tr><td><b>Verified-buyer reviews</b></td><td>ORDER_DELIVERED, then 72 h</td><td class="m">reviews.is_verified, from order_items</td><td class="m">notification-events</td><td>Review volume; conversion on reviewed products</td></tr>
+      <tr><td><b>Points (loyalty)</b></td><td>Earn on ORDER_DELIVERED; redeem at checkout</td><td class="m">loyalty_ledger, append-only; balance cached in Redis</td><td class="m">order-events</td><td>Repeat purchase rate</td></tr>
+      <tr><td><b>Live order tracking</b></td><td>Any ORDER_* event</td><td class="m">order:status:{id} in Redis; SSE stream</td><td class="m">order-events</td><td>Support contacts per order</td></tr>
+      <tr><td><b>Win-back coupon</b></td><td>No order for 45 days</td><td>coupons with a user scope, one per window</td><td class="m">user-events</td><td>Win-back rate</td></tr>
+      <tr><td><b>Second-order nudge</b></td><td>First order delivered, 14 days later</td><td class="m">reco:{productId} from the same category</td><td class="m">order-events</td><td>Second-order rate</td></tr>
+    </tbody>
+  </table></div>
+
+  <div class="dlabel" style="color:var(--accent)">Abandoned cart sequence</div>
+  <div class="rules">
+    <div class="rule"><b>+1 h · reminder</b>Email and push with the exact items and current prices. No discount.</div>
+    <div class="rule"><b>+24 h · social proof</b>Top-rated items from the cart. Stock is mentioned only when it is actually low.</div>
+    <div class="rule"><b>+48 h · optional offer</b>A coupon only where the margin allows it. Skipped for high-value carts.</div>
+    <div class="rule"><b>Any order · stop</b>The sequence ends the moment the cart converts, and never restarts for the same cart.</div>
+  </div>
+
+  <div class="dlabel" style="color:var(--ok)">Guardrails</div>
+  <div class="rules">
+    <div class="rule"><b>Frequency caps</b>At most two marketing messages per shopper per day. Order, OTP and delivery messages skip the cap.</div>
+    <div class="rule"><b>Consent per channel</b>Email, SMS and push are recorded separately, with timestamp and source. A withdrawal takes effect at once.</div>
+    <div class="rule"><b>Quiet hours</b>No marketing between 21:00 and 08:00 in the shopper's own timezone.</div>
+    <div class="rule"><b>Measured holdouts</b>Keep 5% of eligible shoppers out of each campaign, so the lift is measured, not assumed.</div>
+    <div class="rule"><b>Urgency only when true</b>"Only 3 left" and countdowns appear only when they are accurate. Fake urgency costs trust and invites regulator attention.</div>
+    <div class="rule"><b>One identity</b>Guest events merge into the account on signup, so recommendations and recently viewed survive conversion.</div>
+  </div>
+</div>
+
+<!-- ═══════════════════ PERFORMANCE ═══════════════════ -->
+<div class="panel" id="tab-perf">
+  <h1 class="ph">Performance &amp; Caching</h1>
+  <p class="pd">Four cache tiers with explicit TTLs and invalidation, search as a read model, indexes that match the real queries, and a latency budget per endpoint.</p>
+
+  <div class="dlabel" style="color:var(--accent)">Cache tiers</div>
+  <div class="tbl-wrap"><table class="tbl">
+    <thead><tr><th>Tier</th><th>Where</th><th>Holds</th><th>TTL</th><th>Invalidated by</th></tr></thead>
+    <tbody>
+      <tr><td><b>L0 · Edge</b></td><td>CDN (CloudFront)</td><td>Images, hashed JS and CSS, public listings</td><td>Images 1 year (hashed URLs). Listings s-maxage 60, stale-while-revalidate 300</td><td>New file hash. PRODUCT_UPDATED purges listing paths</td></tr>
+      <tr><td><b>L1 · HTTP</b></td><td>Browser and CDN, via ETag</td><td>Product detail, category tree</td><td>Revalidated every request; 304 when unchanged</td><td>Any change alters the ETag</td></tr>
+      <tr><td><b>L2 · In-process</b></td><td>Caffeine, one per instance</td><td>Categories, tax and shipping config, feature flags</td><td>5 min, max 10,000 entries</td><td>Config event broadcast. TTL is the backstop</td></tr>
+      <tr><td><b>L3 · Distributed</b></td><td>Redis 7</td><td>Product JSON, listing pages, carts, recommendations, sessions</td><td>Product 10 min, listing 2 min, cart 7 days, recommendations 24 h</td><td>product-events consumer evicts keys. Writes call @CacheEvict</td></tr>
+      <tr><td><b>Source</b></td><td>PostgreSQL primary and replica</td><td>Truth. The replica serves listings and reports</td><td>None</td><td>Not applicable</td></tr>
+    </tbody>
+  </table></div>
+  <div class="rule" style="margin-bottom:1.5rem"><b>Hot keys and stampedes</b>A product that goes viral can expire under load. A single-flight lock (SET NX PX 3000) lets one request rebuild the value while others wait up to 100 ms or serve the stale copy. Refresh early at 80% of TTL so keys never expire in unison.</div>
+
+  <div class="dlabel" style="color:var(--accent2)">Search as a read model</div>
+  <div class="rules">
+    <div class="rule"><b>Index and alias</b>products_v{n} in Elasticsearch, read through a products alias. Built from product-events, keyed by productId.</div>
+    <div class="rule"><b>Zero-downtime reindex</b>Build products_v{n+1} in the background, replay the topic, then move the alias. Drop the old index a day later.</div>
+    <div class="rule"><b>Analyzers</b>Edge n-gram for suggestions, standard analyzer for results, synonyms (tv = television), fuzziness AUTO for typos.</div>
+    <div class="rule"><b>Facets from the same query</b>Category, brand, price range, rating and in-stock counts come from the search that produced the results, so they never disagree.</div>
+    <div class="rule"><b>Ranking</b>Relevance first, then 30-day sales, then in-stock. Out-of-stock items sink to the end; they are never removed.</div>
+    <div class="rule"><b>Degradation</b>If Elasticsearch is down, search falls back to a 20-item replica query on name and slug, with a notice that results may be limited.</div>
+  </div>
+
+  <div class="dlabel" style="color:var(--warn)">Indexes that match the queries</div>
+  <pre class="sm-wrap" style="font-size:.7rem;line-height:1.6;color:var(--text-muted)">CREATE INDEX idx_products_listing   ON products (category_id, is_active, price);
+CREATE UNIQUE INDEX uq_users_email  ON users (LOWER(email));
+CREATE INDEX idx_orders_user_recent ON orders (user_id, created_at DESC);
+CREATE INDEX idx_order_items_order  ON order_items (order_id);
+CREATE INDEX idx_reviews_product    ON reviews (product_id, created_at DESC);
+CREATE INDEX idx_outbox_pending     ON outbox_events (created_at) WHERE published_at IS NULL;
+CREATE INDEX idx_carts_idle         ON carts (updated_at);
+CREATE INDEX idx_refresh_active     ON refresh_tokens (user_id) WHERE is_revoked = false;</pre>
+  <div class="rules">
+    <div class="rule"><b>Keyset pagination, not OFFSET</b>WHERE (created_at, order_id) &lt; (:lastCreatedAt, :lastId) ORDER BY created_at DESC, order_id DESC LIMIT 20. Cost stays flat as the table grows.</div>
+    <div class="rule"><b>Read routing</b>@Transactional(readOnly = true) goes to the replica through an AbstractRoutingDataSource. Writes, and reads that must see their own write, stay on the primary.</div>
+  </div>
+
+  <div class="dlabel" style="color:var(--ok)">Latency budgets</div>
+  <div class="tbl-wrap"><table class="tbl">
+    <thead><tr><th>Endpoint or flow</th><th>p95 target</th><th>Availability</th><th>How it is met</th></tr></thead>
+    <tbody>
+      <tr><td>Product listing (cache hit)</td><td class="m">150 ms</td><td class="m">99.9%</td><td>CDN serves most requests</td></tr>
+      <tr><td>Product detail</td><td class="m">120 ms</td><td class="m">99.9%</td><td>Redis L3, then the replica</td></tr>
+      <tr><td>Search results</td><td class="m">300 ms</td><td class="m">99.9%</td><td>Elasticsearch, with a replica fallback</td></tr>
+      <tr><td>Suggest (autocomplete)</td><td class="m">80 ms</td><td class="m">99.9%</td><td>Edge n-gram index</td></tr>
+      <tr><td>Add to cart</td><td class="m">200 ms</td><td class="m">99.95%</td><td>Write-through to Redis and the database</td></tr>
+      <tr><td>Checkout API, excluding gateway</td><td class="m">1.2 s</td><td class="m">99.95%</td><td>Saga, see Order Engine</td></tr>
+      <tr><td>Order status event to screen</td><td class="m">p99 2 s</td><td class="m">99.9%</td><td>SSE over Redis pub/sub</td></tr>
+    </tbody>
+  </table></div>
+
+  <div class="dlabel" style="color:var(--kafka)">Frontend and runtime budgets</div>
+  <div class="rules">
+    <div class="rule"><b>Web vitals</b>LCP under 2.5 s, INP under 200 ms, CLS under 0.1, measured on a mid-tier phone over 4G.</div>
+    <div class="rule"><b>JavaScript</b>Split per route, under 150 KB gzipped on first load. Search filters and reviews load lazily.</div>
+    <div class="rule"><b>Images</b>WebP or AVIF, srcset per breakpoint, under 80 KB per listing card, with a blur-up preview.</div>
+    <div class="rule"><b>Compression and payloads</b>Brotli at the edge with gzip fallback. Return DTO projections, never serialised entities.</div>
+    <div class="rule"><b>Connection pool</b>HikariCP starts at 10 connections per instance. Tune from pool metrics. Postgres connections are expensive.</div>
+    <div class="rule"><b>Mapping</b>ModelMapper maps at runtime through reflection. MapStruct generates the mapper at compile time, which is faster on listing and cart paths.</div>
+  </div>
+</div>
+
+<!-- ═══════════════════ RELIABILITY ═══════════════════ -->
+<div class="panel" id="tab-rel">
+  <h1 class="ph">Reliability, Security &amp; Observability</h1>
+  <p class="pd">How the store keeps working when a dependency fails, how it ships without downtime, how it stays hardened, and which signals show it is healthy.</p>
+
+  <div class="dlabel" style="color:var(--danger)">Failure handling</div>
+  <div class="tbl-wrap"><table class="tbl">
+    <thead><tr><th>Dependency or risk</th><th>Pattern</th><th>Starting setting</th></tr></thead>
+    <tbody>
+      <tr><td><b>Payment gateway</b></td><td>Timeout, circuit breaker, bulkhead. Retries only with an Idempotency-Key</td><td>Timeout 5 s. Opens at 50% failures over 20 calls, waits 30 s. Max 20 concurrent calls</td></tr>
+      <tr><td><b>Elasticsearch</b></td><td>Fall back to a replica query</td><td>Switch inside the 300 ms search budget</td></tr>
+      <tr><td><b>Recommendations</b></td><td>Serve bestsellers from Redis</td><td>Always available; refreshed nightly</td></tr>
+      <tr><td><b>Login and OTP</b></td><td>Rate limit per IP and per account</td><td>5 attempts per 15 min. OTP: 3 tries, 5 min life</td></tr>
+      <tr><td><b>API traffic</b></td><td>Token bucket in Redis (Lua)</td><td>20 requests/s, burst 40, per user and per IP</td></tr>
+      <tr><td><b>Kafka consumers</b></td><td>Retry with backoff, then .DLT</td><td>Alert when DLT depth is above zero</td></tr>
+      <tr><td><b>Notification provider</b></td><td>Queue and retry. Never blocks checkout</td><td>Retry for 1 h, then manual review</td></tr>
+      <tr><td><b>Database connection loss</b></td><td>Pool retry; readiness probe fails fast</td><td>Hikari connection timeout 3 s</td></tr>
+    </tbody>
+  </table></div>
+
+  <div class="dlabel" style="color:var(--ok)">Zero-downtime delivery</div>
+  <div class="rules">
+    <div class="rule"><b>Versioned migrations</b>Flyway replaces ddl-auto=update. Expand, migrate data, then contract, one release at a time. Production runs ddl-auto=validate.</div>
+    <div class="rule"><b>Graceful shutdown</b>server.shutdown=graceful with spring.lifecycle.timeout-per-shutdown-phase=30s. Readiness flips first, so the load balancer stops sending traffic.</div>
+    <div class="rule"><b>Kafka consumers</b>Finish in-flight records before shutdown. Commit offsets only after the side effect succeeds.</div>
+    <div class="rule"><b>Feature flags</b>New checkout logic ships dark (OpenFeature), then ramps 5%, 50%, 100%. A kill switch works without a deploy.</div>
+    <div class="rule"><b>Canary ingress</b>Risky changes (pricing, checkout) get a weighted canary, with automatic rollback on an error-rate or latency regression.</div>
+    <div class="rule"><b>Event compatibility</b>Payload changes are additive only. Every event carries schemaVersion. Consumers ignore unknown fields.</div>
+  </div>
+
+  <div class="dlabel" style="color:var(--accent)">Observability</div>
+  <div class="rules">
+    <div class="rule"><b>Traces</b>OpenTelemetry through Micrometer Tracing. One trace follows a checkout from browser to payment webhook to order consumer. Trace IDs travel in HTTP and Kafka headers.</div>
+    <div class="rule"><b>Metrics</b>RED metrics per endpoint. Business counters: checkouts started and completed, payment failure rate, cart abandonment, search zero-result rate, DLT depth, consumer lag.</div>
+    <div class="rule"><b>Logs</b>JSON with traceId, orderId and a hashed userId. Never card data or tokens. 30 days hot, 1 year cold.</div>
+    <div class="rule"><b>Alerts</b>Checkout success below 98% for 5 min. Consumer lag above 10,000 records for 5 min. DLT depth above zero. A fast SLO burn. Gateway circuit open.</div>
+  </div>
+
+  <div class="dlabel" style="color:var(--accent2)">Security hardening</div>
+  <div class="rules">
+    <div class="rule"><b>Refresh tokens</b>Stored as SHA-256 hashes and rotated on every use. A reused token revokes the whole family.</div>
+    <div class="rule"><b>OAuth2</b>One-time code, valid 60 s, exchanged by POST. Tokens never appear in a URL, browser history or a log.</div>
+    <div class="rule"><b>Cookies</b>httpOnly, Secure, SameSite=Strict. The refresh cookie path is limited to /api/v1/auth/refresh.</div>
+    <div class="rule"><b>Passwords</b>Argon2id preferred, BCrypt cost 12 otherwise. Login errors are generic. Breached-password check at signup.</div>
+    <div class="rule"><b>Admin and seller accounts</b>TOTP required. Sessions for these roles expire after 8 hours of inactivity.</div>
+    <div class="rule"><b>Secrets</b>None in application.properties. Vault or environment variables only. Rotate the password already committed to git.</div>
+    <div class="rule"><b>Payments</b>The gateway holds tokenised card data. The store keeps no card numbers, which keeps PCI scope small.</div>
+    <div class="rule"><b>Webhooks</b>HMAC signature, timestamp within 5 minutes, de-duplicated by gateway ID.</div>
+    <div class="rule"><b>Browser hardening</b>CSP, HSTS, X-Content-Type-Options, CORS allow-list. Bot checks at signup, login and checkout.</div>
+  </div>
+</div>
+
+<!-- ═══════════════════ GAP AUDIT ═══════════════════ -->
+<div class="panel" id="tab-audit">
+  <h1 class="ph">Verification &amp; Gap Audit</h1>
+  <p class="pd">Checked against the repository on 2026-11-18. What exists today, what v1 of this blueprint got wrong, and what changed.</p>
+
+  <div class="dlabel" style="color:var(--danger)">Current code, verified</div>
+  <div class="tbl-wrap"><table class="tbl">
+    <thead><tr><th>Area</th><th>What the repo has</th><th>Risk</th><th>Priority</th></tr></thead>
+    <tbody>
+      <tr><td><b>Domain model</b></td><td>One entity, Category (id and name, minimum 5 characters), with DTO, repository, service and controller</td><td>No products, carts or orders yet</td><td><span class="st st-plan">Roadmap</span></td></tr>
+      <tr><td><b>Security</b></td><td>No Spring Security or JWT dependency. Every route is open</td><td>Anyone can create, rename or delete categories</td><td><span class="st st-p0">P0</span></td></tr>
+      <tr><td><b>Write endpoints</b></td><td>POST and PUT sit under /api/public/categories. DELETE sits under /api/admin and is also open</td><td>Public write access; the paths contradict their names</td><td><span class="st st-p0">P0</span></td></tr>
+      <tr><td><b>Credentials</b></td><td>Database user and password are plain text in application.properties, tracked in git</td><td>Anyone with repo access has the database password</td><td><span class="st st-p0">P0</span> rotate, then move to env or Vault</td></tr>
+      <tr><td><b>Schema changes</b></td><td>spring.jpa.hibernate.ddl-auto=update. Seed SQL in scripts/ (untracked)</td><td>Silent drift between machines; no change history</td><td><span class="st st-p1">P1</span> Flyway versioned migrations</td></tr>
+      <tr><td><b>Status codes</b></td><td>PUT on categories returns 201 CREATED</td><td>Clients read an update as a create</td><td><span class="st st-p2">P2</span> return 200</td></tr>
+      <tr><td><b>Tests</b></td><td>One context-load test (SbEcomApplicationTests), which needs a live Postgres</td><td>No fast feedback; no unit or web-slice tests</td><td><span class="st st-p2">P2</span></td></tr>
+      <tr><td><b>Operations</b></td><td>No Dockerfile, no compose file, no Actuator, no health probes</td><td>Hard to reproduce or deploy; no readiness signal</td><td><span class="st st-p2">P2</span></td></tr>
+      <tr><td><b>Leftovers</b></td><td>H2 console enabled, though Postgres is the database. /api/echo is a debug endpoint. delete logs at error level</td><td>Noise and a small attack surface</td><td><span class="st st-p3">P3</span></td></tr>
+    </tbody>
+  </table></div>
+
+  <div class="dlabel" style="color:var(--accent)">What changed from v1 of this blueprint</div>
+  <div class="tbl-wrap"><table class="tbl">
+    <thead><tr><th>Area</th><th>v1 said</th><th>v2 says</th><th>Why</th></tr></thead>
+    <tbody>
+      <tr><td><b>Stack versions</b></td><td>Spring Boot 3.x and Security 6. Flyway, Redis and Kafka shown as in use</td><td>Spring Boot 4.1.2 (Security 7). Flyway, Redis and Kafka marked planned</td><td>Matches pom.xml</td></tr>
+      <tr><td><b>Kafka</b></td><td>ZooKeeper. Replication factor 2 with acks=all</td><td>KRaft (Kafka 4.x). Replication factor 3, min.insync.replicas=2, idempotent producer</td><td>ZooKeeper is gone in Kafka 4.x. With min.insync.replicas=1, acks=all still loses acknowledged writes if the leader fails</td></tr>
+      <tr><td><b>Architecture</b></td><td>"Monolith" subtitle above microservice boxes</td><td>Modular monolith today. Service boxes are targets</td><td>The repo is one application</td></tr>
+      <tr><td><b>Auth tokens</b></td><td>Refresh token stored raw. OAuth tokens returned in the redirect URL. Redis session hash</td><td>Hashed refresh with family reuse detection. One-time OAuth code. Stateless access tokens</td><td>Stolen-token and leak risks</td></tr>
+      <tr><td><b>Category API</b></td><td>Create and update labelled USER, while the RBAC matrix says ADMIN</td><td>ADMIN only, under /api/admin/categories</td><td>The two sections contradicted each other</td></tr>
+      <tr><td><b>Cart API</b></td><td>Both /carts and /cart used</td><td>/carts only</td><td>Consistency</td></tr>
+      <tr><td><b>Schema</b></td><td>Stock on the products row. Price stored in cart_items. Order keeps only address_id</td><td>Inventory table with @Version and reservations. Re-price at checkout. Order snapshots the address. NUMERIC(12,2) plus currency</td><td>Concurrent stock updates, price integrity, and address edits must not rewrite past orders</td></tr>
+      <tr><td><b>Rate limiting</b></td><td>Fixed window with INCR and EXPIRE</td><td>Token bucket in Redis via Lua</td><td>Fixed windows allow double bursts at the boundary</td></tr>
+      <tr><td><b>Diagram</b></td><td>Sub-labels #64748B on dark boxes (below WCAG AA). Legend fill read from var() inside an SVG attribute</td><td>Sub-labels #CBD5E1. Explicit fills everywhere</td><td>Readable in both themes</td></tr>
+      <tr><td><b>Scope</b></td><td>No journey, order saga, engagement, performance, reliability or audit content</td><td>Added as separate tabs</td><td>Requested scope</td></tr>
+      <tr><td><b>Stack chips</b></td><td>Flyway, Docker, K8s, jjwt and Resilience4j shown as in use</td><td>Marked planned</td><td>Not in pom.xml</td></tr>
+    </tbody>
+  </table></div>
+
+  <div class="dlabel" style="color:var(--warn)">Decisions for you</div>
+  <div class="rules">
+    <div class="rule"><b>Rotate the database password</b>It is in git history, so changing it in the file alone is not enough.</div>
+    <div class="rule"><b>Architecture path</b>Stay a modular monolith until a Kafka consumer needs its own deploy. Recommended. Or split notifications first.</div>
+    <div class="rule"><b>Payment gateway</b>Sets the webhook format and the saga's payment step.</div>
+    <div class="rule"><b>Currency and tax rules</b>Set the money columns and checkout display.</div>
+    <div class="rule"><b>Target markets</b>Data-protection rules and consent wording depend on them.</div>
+  </div>
+</div>
+
+</main>
+
+<script>
+function sw(id, el) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('on'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('on'));
+  document.getElementById('tab-' + id).classList.add('on');
+  el.classList.add('on');
+  try { localStorage.setItem('sc-tab', id); } catch(e){}
+  document.querySelectorAll('.tab').forEach(t => t.setAttribute('aria-selected', String(t === el)));
+}
+function themeLabel() {
+  const v = document.documentElement.getAttribute('data-theme');
+  document.getElementById('themeBtn').textContent = v ? 'Theme: ' + (v === 'dark' ? 'Dark' : 'Light') : 'Theme: Auto';
+}
+function toggleTheme() {
+  const r = document.documentElement;
+  const cur = r.getAttribute('data-theme');
+  const dark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+  if (!cur) r.setAttribute('data-theme', dark ? 'light' : 'dark');
+  else if (cur === 'dark') r.setAttribute('data-theme', 'light');
+  else r.removeAttribute('data-theme');
+  try { localStorage.setItem('sc-theme', r.getAttribute('data-theme') || 'system'); } catch(e){}
+  themeLabel();
+}
+try {
+  const t = localStorage.getItem('sc-tab');
+  if (t) {
+    const btn = [...document.querySelectorAll('.tab')].find(b => b.getAttribute('onclick').includes("'"+t+"'"));
+    if (btn) btn.click();
+  }
+  const th = localStorage.getItem('sc-theme');
+  if (th && th !== 'system') document.documentElement.setAttribute('data-theme', th);
+} catch(e){}
+document.querySelectorAll('.tab').forEach(t => { t.setAttribute('role', 'tab'); t.setAttribute('aria-selected', String(t.classList.contains('on'))); });
+themeLabel();
+</script>
+
+</body></html>
