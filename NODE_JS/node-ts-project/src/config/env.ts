@@ -18,6 +18,10 @@ export const env = {
     databaseUrl: checkRequiredEnvVariable("DATABASE_URL"),
     jwtAccessSecret: checkRequiredEnvVariable("JWT_SECRET"),
     jwtAccessExpiresIn: checkRequiredEnvVariable("JWT_ACCESS_EXPIRES_IN"),
-    
+    jwtRefreshExpiresIn: process.env.JWT_REFRESH_EXPIRES_IN ?? "30d",
+    upstashRedisUrl: checkRequiredEnvVariable("UPSTASH_REDIS_REST_URL"),
+    upstashRedisToken: checkRequiredEnvVariable("UPSTASH_REDIS_REST_TOKEN"),
+    redisUrl: checkRequiredEnvVariable("REDIS_URL"),
+
 } as const;
 
