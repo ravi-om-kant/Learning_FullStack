@@ -1,4 +1,5 @@
 import { pool } from "../libs/db";
+import { redisClient } from "../redis/redis";
 import {
   CreateProductInput,
   Product,
@@ -7,6 +8,12 @@ import {
 
 const PRODUCT_COLUMNS =
   "id, name, description, category, brand, created_by, created_at, updated_at";
+
+const PRODUCT_CACHE_TTL_SECONDS = 5 * 60; // 5 minutes
+
+function productCacheKey(id: string): string {
+  return `product:${id}`;
+}
 
 export async function createProduct(
   input: CreateProductInput,
@@ -55,11 +62,26 @@ export async function countProducts(
 }
 
 export async function getProductById(id: string): Promise<Product | null> {
+  const cacheKey = productCacheKey(id);
+
+  const cached = await redisClient.get<Product>(cacheKey);
+  if (cached) {
+    console.log("from REDIS ---", cached);
+    return cached;
+  }
+
   const result = await pool.query<Product>(
     `select ${PRODUCT_COLUMNS} from products where id = $1`,
     [id],
   );
-  return result.rows[0] ?? null;
+
+  const product = result.rows[0] ?? null;
+
+  if (product) {
+    await redisClient.set(cacheKey, product, { ex: PRODUCT_CACHE_TTL_SECONDS });
+  }
+
+  return product;
 }
 
 export async function updateProduct(
@@ -77,10 +99,23 @@ export async function updateProduct(
         returning ${PRODUCT_COLUMNS}`,
     [fields.name, fields.description, fields.category, fields.brand, id],
   );
-  return result.rows[0] ?? null;
+
+  const product = result.rows[0] ?? null;
+
+  if (product) {
+    await redisClient.del(productCacheKey(id));
+  }
+
+  return product;
 }
 
 export async function deleteProduct(id: string): Promise<boolean> {
   const result = await pool.query(`delete from products where id = $1`, [id]);
-  return (result.rowCount ?? 0) > 0;
+  const deleted = (result.rowCount ?? 0) > 0;
+
+  if (deleted) {
+    await redisClient.del(productCacheKey(id));
+  }
+
+  return deleted;
 }
